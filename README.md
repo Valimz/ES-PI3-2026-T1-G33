@@ -2,11 +2,11 @@
 
 ## Integrantes
 
-• CAUÃ BIANCHI FERRONI<br>
-• FELIPE AUGUSTO DOS SANTOS SILVA<br>
-• LEONARDO SANTIAGO TENCA<br>
-• MARINA HEHNES ESPOSITO<br>
-• VINICIUS VALIM DE VECHI CARDOSO
+• Cauã Bianchi Ferroni<br>
+• Felipe Augusto dos Santos SILVA<br>
+• Leonardo Santiago Tenca<br>
+• Marina Hehnes Esposito<br>
+• Vinicius Valim de Vechi Cardoso
 
 ## Descrição
 
@@ -31,6 +31,7 @@ O objetivo é proporcionar uma experiência prática na modelagem e desenvolvime
 • Firebase Firestore
 
 **Ambiente de desenvolvimento**
+
 • Microsoft Visual Studio Code<br>
 • Android Studio
 
