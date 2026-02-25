@@ -2,11 +2,11 @@
 
 ## Integrantes
 
-| CAUÃ BIANCHI FERRONI |
-| FELIPE AUGUSTO DOS SANTOS SILVA |
-| LEONARDO SANTIAGO TENCA |
-| MARINA HEHNES ESPOSITO |
-| VINICIUS VALIM DE VECHI CARDOSO |
+• CAUÃ BIANCHI FERRONI<br>
+• FELIPE AUGUSTO DOS SANTOS SILVA<br>
+• LEONARDO SANTIAGO TENCA<br>
+• MARINA HEHNES ESPOSITO<br>
+• VINICIUS VALIM DE VECHI CARDOSO
 
 ## Descrição
 
@@ -18,12 +18,12 @@ O objetivo é proporcionar uma experiência prática na modelagem e desenvolvime
 
 **Backend:**
 
-• Node.js
+• Node.js<br>
 • TypeScript / JavaScript
 
 **Frontend**
 
-• Flutter
+• Flutter<br>
 • Dart
 
 **Banco de dados**
@@ -31,10 +31,10 @@ O objetivo é proporcionar uma experiência prática na modelagem e desenvolvime
 • Firebase Firestore
 
 **Ambiente de desenvolvimento**
-• Microsoft Visual Studio Code
+• Microsoft Visual Studio Code<br>
 • Android Studio
 
 **Controle de Versão e Repositório**
 
-• Git
+• Git<br>
 • Repositório hospedado **exclusivamente** no GitHub
