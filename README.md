@@ -16,7 +16,7 @@ O objetivo é proporcionar uma experiência prática na modelagem e desenvolvime
 
 ## Técnologias utilizadas
 
-**Backend:**
+**Backend**
 
 • Node.js<br>
 • TypeScript / JavaScript
