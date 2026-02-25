@@ -3,7 +3,7 @@
 ## Integrantes
 
 • Cauã Bianchi Ferroni<br>
-• Felipe Augusto dos Santos SILVA<br>
+• Felipe Augusto dos Santos Silva<br>
 • Leonardo Santiago Tenca<br>
 • Marina Hehnes Esposito<br>
 • Vinicius Valim de Vechi Cardoso
