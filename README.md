@@ -48,16 +48,16 @@ Para executar o sistema em ambiente de testes, siga os passos abaixo:
 Node.js (LTS) instalado.<br>
 Flutter SDK configurado.<br>
 
-**IDEs recomendadas**
+**IDEs recomendadas**<br>
 VS Code ou Android Studio.
 
-**Passo 1: Configuração do Backend**
+**Passo 1: Configuração do Backend**<br>
 Navegue até a pasta /backend.<br>
 Instale as dependências: npm install.<br>
 Configure as variáveis de ambiente para o Firebase Firestore.<br>
 Inicie o servidor: npm run dev.<br>
 
-**Passo 2: Configuração do Mobile**
+**Passo 2: Configuração do Mobile**<br>
 Navegue até a pasta /mobile.<br>
 Obtenha os pacotes do Flutter: flutter pub get.<br>
 Execute a aplicação em um emulador ou dispositivo físico: flutter run.
