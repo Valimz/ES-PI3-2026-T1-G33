@@ -1,0 +1,23 @@
+# Firebase e Segredos
+*.json
+pi3-2026-mobile-mesclainvest-firebase-adminsdk-fbsvc-4d4d514064.json
+.env
+
+# Node.js
+node_modules/
+dist/
+npm-debug.log*
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+
+# IDEs e OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
