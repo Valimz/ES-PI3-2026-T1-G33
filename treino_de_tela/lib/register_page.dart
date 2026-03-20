@@ -7,7 +7,7 @@ class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
@@ -59,7 +59,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   'Comece a gerenciar seus investimentos.',
                   style: TextStyle(
                     fontSize: 16,
-                    color: AppColors.textBody.withOpacity(0.7),
+                    color: AppColors.textBody.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -106,7 +106,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         _obscureSenha
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppColors.textBody.withOpacity(0.5),
+                        color: AppColors.textBody.withValues(alpha: 0.5),
                       ),
                       onPressed: () =>
                           setState(() => _obscureSenha = !_obscureSenha),
@@ -128,6 +128,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         _emailController.text,
                         _passwordController.text,
                       );
+                      if (!context.mounted) return;
                       if (response.statusCode == 201) {
                         Navigator.pushReplacement(
                           context,
@@ -163,7 +164,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       Text(
                         "Já possui uma conta? ",
                         style: TextStyle(
-                            color: AppColors.textBody.withOpacity(0.7)),
+                            color: AppColors.textBody.withValues(alpha: 0.7)),
                       ),
                       GestureDetector(
                         onTap: () {

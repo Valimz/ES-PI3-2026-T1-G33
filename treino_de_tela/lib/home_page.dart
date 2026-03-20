@@ -74,16 +74,16 @@ class HomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Saldo Simulado', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14)),
+          Text('Saldo Simulado', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
           const SizedBox(height: 8),
           const Text('RS 15.250,00', 
             style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildQuickAction(Icons.add_circle_outline, "Adicionar", onTap: () {print("Adicionar");}),
+              _buildQuickAction(Icons.add_circle_outline, "Adicionar", onTap: () {debugPrint("Adicionar");}),
               const SizedBox(width: 12),
-              _buildQuickAction(Icons.swap_horiz, "Negociar", onTap: () {print("Negociar");}),
+              _buildQuickAction(Icons.swap_horiz, "Negociar", onTap: () {debugPrint("Negociar");}),
             ],
           ),
         ],
@@ -97,7 +97,7 @@ class HomePage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -128,7 +128,7 @@ class HomePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Row(
         children: [

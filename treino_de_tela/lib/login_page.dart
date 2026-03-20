@@ -60,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
                   'Acesse sua carteira e gerencie seus aportes.',
                   style: TextStyle(
                     fontSize: 16,
-                    color: AppColors.textBody.withOpacity(0.7),
+                    color: AppColors.textBody.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -95,7 +95,7 @@ class _LoginPageState extends State<LoginPage> {
                         _obscureSenha
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppColors.textBody.withOpacity(0.5),
+                        color: AppColors.textBody.withValues(alpha: 0.5),
                       ),
                       onPressed: () =>
                           setState(() => _obscureSenha = !_obscureSenha),
@@ -133,6 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                         _emailController.text,
                         _passwordController.text,
                       );
+                      if (!context.mounted) return;
                       if (response.statusCode == 200) {
                         Navigator.pushReplacement(
                           context,
@@ -167,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                 Row(
                   children: [
                     Expanded(
-                        child: Divider(color: Colors.grey.withOpacity(0.3))),
+                        child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
@@ -177,7 +178,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     Expanded(
-                        child: Divider(color: Colors.grey.withOpacity(0.3))),
+                        child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
                   ],
                 ),
 
@@ -206,14 +207,14 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         "Novo por aqui? ",
                         style:
-                            TextStyle(color: AppColors.textBody.withOpacity(0.7)),
+                            TextStyle(color: AppColors.textBody.withValues(alpha: 0.7)),
                       ),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => RegisterPage()),
+                                builder: (context) => const RegisterPage()),
                           );
                         },
                           child: const Text(
@@ -249,3 +250,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
