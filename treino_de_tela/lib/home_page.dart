@@ -127,7 +127,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Card de Visualização de Valorização [cite: 176]
+  // Card de Visualização de Valorização
   Widget _buildPortfolioChart() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -138,26 +138,73 @@ class HomePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
-      child: StreamBuilder<Map<String, dynamic>?>(
-        stream: FirestoreService().getWalletData(),
-        builder: (context, snapshot) {
-          final wallet = snapshot.data;
-          final appreciation = wallet?['appreciation'] ?? '+ 0,0%';
-          return Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Valorização Total', style: TextStyle(color: Colors.grey)),
-                    Text(appreciation, style: const TextStyle(color: AppColors.accent, fontSize: 24, fontWeight: FontWeight.bold)),
-                    Text('Últimos 30 dias', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.show_chart, size: 80, color: AppColors.accent),
-            ],
+      child: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: FirestoreService().getUserAssets(),
+        builder: (context, assetsSnapshot) {
+          return StreamBuilder<List<Map<String, dynamic>>>(
+            stream: FirestoreService().getStartups(),
+            builder: (context, startupsSnapshot) {
+              String appreciationText = '+ 0,0%';
+              Color appreciationColor = AppColors.accent;
+
+              if (assetsSnapshot.hasData && startupsSnapshot.hasData) {
+                final assets = assetsSnapshot.data ?? [];
+                final startups = startupsSnapshot.data ?? [];
+
+                double totalInvested = 0.0;
+                double totalCurrent = 0.0;
+
+                for (var asset in assets) {
+                  final investedValStr = asset['value']?.toString() ?? 'R\$ 0,00';
+                  final investedVal = FirestoreService().parseCurrency(investedValStr);
+                  
+                  final amountStr = asset['amount']?.toString().split(' ').first ?? '0';
+                  final currentQuotas = double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
+                  
+                  if (currentQuotas > 0) {
+                    totalInvested += investedVal;
+                    
+                    final startupName = asset['name'];
+                    final startup = startups.firstWhere((s) => s['name'] == startupName, orElse: () => {});
+                    final currentPriceStr = startup['val']?.toString() ?? 'R\$ 0,00';
+                    final currentPrice = FirestoreService().parseCurrency(currentPriceStr);
+                    
+                    totalCurrent += (currentQuotas * currentPrice);
+                  }
+                }
+
+                if (totalInvested > 0) {
+                  double appreciationPercent = ((totalCurrent / totalInvested) - 1) * 100;
+                  appreciationText = "${appreciationPercent >= 0 ? '+' : ''}${appreciationPercent.toStringAsFixed(2)}%";
+                  appreciationText = appreciationText.replaceAll('.', ',');
+                  
+                  if (appreciationPercent < 0) {
+                    appreciationColor = Colors.redAccent;
+                  }
+                }
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Valorização Total', style: TextStyle(color: Colors.grey)),
+                        Text(appreciationText, style: TextStyle(color: appreciationColor, fontSize: 24, fontWeight: FontWeight.bold)),
+                        Text('Baseado nos ativos atuais', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    appreciationText.startsWith('-') ? Icons.trending_down : Icons.trending_up, 
+                    size: 80, 
+                    color: appreciationColor.withValues(alpha: 0.3)
+                  ),
+                ],
+              );
+            }
           );
         }
       ),

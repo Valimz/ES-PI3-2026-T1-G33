@@ -59,7 +59,7 @@ class FirestoreService {
   // Utilitário para formatar/desformatar moeda (BRL)
   final NumberFormat _currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
-  double _parseCurrency(String currencyStr) {
+  double parseCurrency(String currencyStr) {
     try {
       // Remove tudo que não for número ou vírgula, e converte vírgula pra ponto
       String cleanString = currencyStr.replaceAll(RegExp(r'[^0-9,]'), '').replaceAll(',', '.');
@@ -84,7 +84,7 @@ class FirestoreService {
 
       final data = walletDoc.data()!;
       final balanceStr = data['balance'] ?? 'R\$ 0,00';
-      final currentBalance = _parseCurrency(balanceStr);
+      final currentBalance = parseCurrency(balanceStr);
       
       final newBalance = currentBalance + amountToAdd;
       
@@ -116,7 +116,7 @@ class FirestoreService {
       if (!walletDoc.exists) throw Exception("Carteira não encontrada");
 
       final walletData = walletDoc.data()!;
-      final currentBalance = _parseCurrency(walletData['balance'] ?? 'R\$ 0,00');
+      final currentBalance = parseCurrency(walletData['balance'] ?? 'R\$ 0,00');
       
       if (currentBalance < amountToBuy) {
         throw Exception("Saldo insuficiente");
@@ -137,14 +137,14 @@ class FirestoreService {
         final assetRef = assetDoc.reference;
         final assetData = assetDoc.data();
         
-        final currentAssetValue = _parseCurrency(assetData['value'] ?? 'R\$ 0,00');
+        final currentAssetValue = parseCurrency(assetData['value'] ?? 'R\$ 0,00');
         // Quotas é string, ex: "100 AD"
         final quotasStr = assetData['amount']?.toString().split(' ').first ?? '0';
         final currentQuotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
         
         // Simular preço por quota baseado no valor aportado da startup? 
         // A startup tem um campo `val` (ex: "R$ 12,00").
-        final startupPrice = _parseCurrency(startup['val'] ?? 'R\$ 1,00');
+        final startupPrice = parseCurrency(startup['val'] ?? 'R\$ 1,00');
         final newQuotas = currentQuotas + (amountToBuy / (startupPrice > 0 ? startupPrice : 1));
         
         // Define o prefixo correto da quota
@@ -156,7 +156,7 @@ class FirestoreService {
         });
       } else {
         // Cria novo ativo
-        final startupPrice = _parseCurrency(startup['val'] ?? 'R\$ 1,00');
+        final startupPrice = parseCurrency(startup['val'] ?? 'R\$ 1,00');
         final quotas = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
         String prefix = " ${startup['name'].toString().substring(0, 2).toUpperCase()}";
         
@@ -169,7 +169,7 @@ class FirestoreService {
       }
 
       // Calcula as cotas para o histórico
-      final startupPrice = _parseCurrency(startup['val'] ?? 'R\$ 1,00');
+      final startupPrice = parseCurrency(startup['val'] ?? 'R\$ 1,00');
       final boughtQuotas = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
       final quotasPrefix = " ${startup['name'].toString().substring(0, 2).toUpperCase()}";
 
@@ -180,6 +180,49 @@ class FirestoreService {
         'title': 'Compra: ${startup['name']}',
         'amount': _currencyFormat.format(amountToBuy),
         'quotas': "${boughtQuotas.toStringAsFixed(1)}$quotasPrefix",
+        'date': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  // Vender todos os ativos de uma empresa
+  Future<void> sellAllAsset(Map<String, dynamic> asset) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final walletRef = _db.collection('users').doc(user.uid).collection('wallet').doc('main');
+    final assetRef = _db.collection('users').doc(user.uid).collection('assets').doc(asset['id']);
+    
+    return _db.runTransaction((transaction) async {
+      final walletDoc = await transaction.get(walletRef);
+      final assetDoc = await transaction.get(assetRef);
+      
+      if (!walletDoc.exists) throw Exception("Carteira não encontrada");
+      if (!assetDoc.exists) throw Exception("Ativo não encontrado");
+
+      final walletData = walletDoc.data()!;
+      final currentBalance = parseCurrency(walletData['balance'] ?? 'R\$ 0,00');
+      
+      final assetData = assetDoc.data()!;
+      final currentAssetValue = parseCurrency(assetData['value'] ?? 'R\$ 0,00');
+      final quotasStr = assetData['amount']?.toString() ?? '0 Cotas';
+      
+      // Adiciona o valor total do ativo de volta à carteira
+      final newBalance = currentBalance + currentAssetValue;
+      transaction.update(walletRef, {
+        'balance': _currencyFormat.format(newBalance),
+      });
+
+      // Remove o ativo
+      transaction.delete(assetRef);
+
+      // Salva o histórico
+      final acquisitionRef = _db.collection('users').doc(user.uid).collection('acquisitions').doc();
+      transaction.set(acquisitionRef, {
+        'type': 'sell',
+        'title': 'Venda: ${assetData['name']}',
+        'amount': _currencyFormat.format(currentAssetValue),
+        'quotas': quotasStr,
         'date': FieldValue.serverTimestamp(),
       });
     });
