@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:treino_de_tela/explore_page.dart';
 import 'package:treino_de_tela/home_page.dart';
 import 'package:treino_de_tela/login_page.dart';
 import 'package:treino_de_tela/register_page.dart';
 import 'package:treino_de_tela/wallet_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Log: Firebase precisa ser configurado no Console. \$e");
+  }
   runApp(const MainApp());
 }
 

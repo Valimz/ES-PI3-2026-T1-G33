@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // Para acessar AppColors
+import 'package:treino_de_tela/services/firestore_service.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -16,16 +17,14 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void initState() {
     super.initState();
-    // Dados simulados de startups
-    _allStartups = [
-      {"name": "EcoToken", "stage": "Em operação", "val": "RS 12,00"},
-      {"name": "HealthTech", "stage": "Em expansão", "val": "RS 45,50"},
-      {"name": "AgroData", "stage": "Nova", "val": "RS 5,00"},
-      {"name": "FinSol", "stage": "Em operação", "val": "RS 28,75"},
-      {"name": "Educa+", "stage": "Nova", "val": "RS 7,50"},
-      {"name": "Mobility Z", "stage": "Em expansão", "val": "RS 98,00"},
-    ];
-    _filteredStartups = _allStartups;
+    // Iniciar escuta das startups do Firebase
+    FirestoreService().getStartups().listen((startups) {
+      if (!mounted) return;
+      setState(() {
+        _allStartups = startups.map((e) => e.map((k, v) => MapEntry(k, v.toString()))).toList();
+        _filterStartups();
+      });
+    });
     _searchController.addListener(_filterStartups);
   }
 
@@ -39,7 +38,7 @@ class _ExplorePageState extends State<ExplorePage> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredStartups = _allStartups.where((startup) {
-        return startup['name']!.toLowerCase().contains(query);
+        return (startup['name'] ?? '').toLowerCase().contains(query);
       }).toList();
     });
   }
@@ -95,13 +94,13 @@ class _ExplorePageState extends State<ExplorePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(startup['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                  Text(startup['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                   const SizedBox(height: 4),
-                  Text(startup['stage']!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text(startup['stage'] ?? '', style: const TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
             ),
-            Text(startup['val']!, style: const TextStyle(fontSize: 16, color: AppColors.accent, fontWeight: FontWeight.bold)),
+            Text(startup['val'] ?? '', style: const TextStyle(fontSize: 16, color: AppColors.accent, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

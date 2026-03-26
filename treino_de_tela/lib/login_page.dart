@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:treino_de_tela/api_service.dart';
+import 'package:treino_de_tela/services/firebase_auth_service.dart';
 import 'package:treino_de_tela/home_page.dart';
 import 'package:treino_de_tela/register_page.dart';
 import 'main.dart';
@@ -129,21 +129,23 @@ class _LoginPageState extends State<LoginPage> {
                 ElevatedButton(
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      final response = await ApiService.login(
-                        _emailController.text,
-                        _passwordController.text,
-                      );
-                      if (!context.mounted) return;
-                      if (response.statusCode == 200) {
+                      try {
+                        final authService = FirebaseAuthService();
+                        await authService.loginWithEmailAndPassword(
+                          _emailController.text,
+                          _passwordController.text,
+                        );
+                        if (!context.mounted) return;
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const HomePage()),
                         );
-                      } else {
+                      } catch (e) {
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Falha ao fazer login')),
+                          SnackBar(
+                              content: Text(e.toString().replaceAll('Exception: ', ''))),
                         );
                       }
                     }

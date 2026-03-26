@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:treino_de_tela/api_service.dart';
+import 'package:treino_de_tela/services/firebase_auth_service.dart';
 import 'package:treino_de_tela/login_page.dart';
 import 'main.dart'; // Import main.dart to use AppColors
 
@@ -123,22 +123,24 @@ class _RegisterPageState extends State<RegisterPage> {
                 ElevatedButton(
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      final response = await ApiService.register(
-                        _usernameController.text,
-                        _emailController.text,
-                        _passwordController.text,
-                      );
-                      if (!context.mounted) return;
-                      if (response.statusCode == 201) {
+                      try {
+                        final authService = FirebaseAuthService();
+                        await authService.registerWithEmailAndPassword(
+                          _usernameController.text,
+                          _emailController.text,
+                          _passwordController.text,
+                        );
+                        if (!context.mounted) return;
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const LoginPage()),
                         );
-                      } else {
+                      } catch(e) {
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Falha ao registrar')),
+                          SnackBar(
+                              content: Text(e.toString().replaceAll('Exception: ', ''))),
                         );
                       }
                     }
