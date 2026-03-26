@@ -40,6 +40,20 @@ class FirestoreService {
         }).toList());
   }
 
+  // Stream para listar histórico de aquisições/transações
+  Stream<List<Map<String, dynamic>>> getUserAcquisitions() {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db.collection('users').doc(user.uid).collection('acquisitions')
+        .orderBy('date', descending: true)
+        .snapshots().map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList());
+  }
+
   // --- MÉTODOS DE NEGOCIAÇÃO E CARTEIRA ---
   
   // Utilitário para formatar/desformatar moeda (BRL)
@@ -76,6 +90,15 @@ class FirestoreService {
       
       transaction.update(walletRef, {
         'balance': _currencyFormat.format(newBalance),
+      });
+
+      // Salva o histórico de depósito
+      final acquisitionRef = _db.collection('users').doc(user.uid).collection('acquisitions').doc();
+      transaction.set(acquisitionRef, {
+        'type': 'deposit',
+        'title': 'Depósito',
+        'amount': _currencyFormat.format(amountToAdd),
+        'date': FieldValue.serverTimestamp(),
       });
     });
   }
@@ -144,6 +167,21 @@ class FirestoreService {
           'amount': "${quotas.toStringAsFixed(1)}$prefix",
         });
       }
+
+      // Calcula as cotas para o histórico
+      final startupPrice = _parseCurrency(startup['val'] ?? 'R\$ 1,00');
+      final boughtQuotas = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
+      final quotasPrefix = " ${startup['name'].toString().substring(0, 2).toUpperCase()}";
+
+      // Salva o histórico da compra
+      final acquisitionRef = _db.collection('users').doc(user.uid).collection('acquisitions').doc();
+      transaction.set(acquisitionRef, {
+        'type': 'buy',
+        'title': 'Compra: ${startup['name']}',
+        'amount': _currencyFormat.format(amountToBuy),
+        'quotas': "${boughtQuotas.toStringAsFixed(1)}$quotasPrefix",
+        'date': FieldValue.serverTimestamp(),
+      });
     });
   }
 
@@ -179,23 +217,33 @@ class FirestoreService {
       if (!walletDoc.exists) {
         await walletRef.set({
           "balance": "R\$ 15.250,00",
-          "appreciation": "+ 12,5%"
+          "appreciation": "+ 0,0%"
         });
-        
-        // Ativos padrão
-        final assetsCollection = _db.collection('users').doc(user.uid).collection('assets');
-        
-        final List<Map<String, dynamic>> initialAssets = [
-          {"name": "EcoToken", "amount": "150.5 ETK", "value": "R\$ 1.806,00"},
-          {"name": "HealthTech", "amount": "50.2 HT", "value": "R\$ 2.284,10"},
-          {"name": "AgroData", "amount": "1000 AD", "value": "R\$ 5.000,00"},
-          {"name": "Invest Fundo Imobiliário", "amount": "10 Cotas", "value": "R\$ 1.160,00"},
-        ];
-        
-        for (var asset in initialAssets) {
-          await assetsCollection.add(asset);
-        }
-        print("Carteira e Ativos do \${user.email} criados com sucesso!");
+        print("Carteira do \$user.email criada com sucesso!");
+      }
+    }
+  }
+
+  // --- MÉTODOS DE LIMPEZA ---
+  Future<void> removePlaceholderAssets() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    
+    final assetsCollection = _db.collection('users').doc(user.uid).collection('assets');
+    final acquisitionsCollection = _db.collection('users').doc(user.uid).collection('acquisitions');
+
+    // Identifica quais empresas o usuário de fato comprou (que têm histórico gerado)
+    final acquisitionsQuery = await acquisitionsCollection.where('type', isEqualTo: 'buy').get();
+    final realPurchasedStartupNames = acquisitionsQuery.docs
+        .map((doc) => doc.data()['title']?.toString().replaceAll('Compra: ', '') ?? '')
+        .toSet();
+
+    final assetsQuery = await assetsCollection.get();
+    for (var doc in assetsQuery.docs) {
+      final assetName = doc.data()['name'] ?? '';
+      // Se não houver histórico de compra dessa empresa, foi inject de placeholder
+      if (!realPurchasedStartupNames.contains(assetName)) {
+        await doc.reference.delete();
       }
     }
   }

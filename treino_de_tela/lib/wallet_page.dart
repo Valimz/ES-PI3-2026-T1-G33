@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main.dart'; // Para acessar AppColors
 import 'package:treino_de_tela/services/firestore_service.dart';
+import 'transaction_details_page.dart';
 
 class WalletPage extends StatelessWidget {
   const WalletPage({super.key});
@@ -23,6 +25,20 @@ class WalletPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.cleaning_services, color: AppColors.primary),
+            tooltip: "Limpar ativos placeholders (teste)",
+            onPressed: () async {
+              await FirestoreService().removePlaceholderAssets();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Ativos fictícios (sem histórico real) foram limpos!")),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: ListView(
         children: [
@@ -30,6 +46,10 @@ class WalletPage extends StatelessWidget {
           const SizedBox(height: 24),
           _buildSectionTitle("Meus Ativos"),
           _buildAssetList(),
+          const SizedBox(height: 24),
+          _buildSectionTitle("Histórico de Transações"),
+          _buildAcquisitionsList(),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -213,6 +233,119 @@ class WalletPage extends StatelessWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _buildAcquisitionsList() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: FirestoreService().getUserAcquisitions(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text("Erro ao carregar histórico."));
+        }
+
+        final acquisitions = snapshot.data ?? [];
+        if (acquisitions.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("Nenhuma transação encontrada."),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: acquisitions.length,
+          itemBuilder: (context, index) {
+            final acq = acquisitions[index];
+            final isBuy = acq['type'] == 'buy';
+            final icon = isBuy ? Icons.arrow_outward : Icons.arrow_downward;
+            final iconColor = isBuy ? Colors.orange : Colors.green;
+            
+            // Formatando data
+            String dateFormatted = "";
+            if (acq['date'] != null && acq['date'] is Timestamp) {
+              final DateTime date = (acq['date'] as Timestamp).toDate();
+              dateFormatted = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} · ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+            }
+
+            return InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TransactionDetailsPage(transaction: acq),
+                  ),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: iconColor.withValues(alpha: 0.1),
+                    child: Icon(icon, color: iconColor),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          acq['title'] ?? 'Transação',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (isBuy && acq['quotas'] != null)
+                          Text(
+                            acq['quotas'],
+                            style: const TextStyle(fontSize: 14, color: AppColors.primary),
+                          ),
+                        Text(
+                          dateFormatted,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    acq['amount'] ?? '',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: isBuy ? AppColors.primary : Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
         );
       },
     );
