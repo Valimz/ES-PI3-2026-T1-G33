@@ -1,11 +1,12 @@
+import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:treino_de_tela/explore_page.dart';
-import 'package:treino_de_tela/home_page.dart';
-import 'package:treino_de_tela/login_page.dart';
-import 'package:treino_de_tela/register_page.dart';
-import 'package:treino_de_tela/wallet_page.dart';
+import 'package:treino_de_tela/pages/explore_page.dart';
+import 'package:treino_de_tela/pages/home_page.dart';
+import 'package:treino_de_tela/pages/login_page.dart';
+import 'package:treino_de_tela/pages/register_page.dart';
+import 'package:treino_de_tela/pages/wallet_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,13 +18,6 @@ void main() async {
     debugPrint("Log: Firebase precisa ser configurado no Console. \$e");
   }
   runApp(const MainApp());
-}
-
-class AppColors {
-  static const Color primary = Color(0xFF1A1A2E);
-  static const Color accent = Color(0xFF4ECCA3);
-  static const Color background = Color(0xFFF7F9FC);
-  static const Color textBody = Color(0xFF4A4A4A);
 }
 
 class MainApp extends StatelessWidget {

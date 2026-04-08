@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'main.dart'; // Para acessar AppColors
+import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
 
 class HomePage extends StatelessWidget {
@@ -379,7 +379,7 @@ class HomePage extends StatelessWidget {
                           labelText: 'Selecione a Startup',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        value: selectedStartupId,
+                        initialValue: selectedStartupId,
                         items: startups.map((startup) {
                           final id = startup['id']?.toString() ?? startup['name'] as String;
                           return DropdownMenuItem<String>(

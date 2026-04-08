@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:treino_de_tela/services/firebase_auth_service.dart';
-import 'package:treino_de_tela/login_page.dart';
-import 'main.dart'; // Import main.dart to use AppColors
+import 'package:treino_de_tela/pages/login_page.dart';
+import 'package:treino_de_tela/theme/app_colors.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -248,7 +249,7 @@ class FirestoreService {
       for (var startup in initialStartups) {
         await startupsCollection.add(startup);
       }
-      print("Startups semeadas com sucesso!");
+      debugPrint("Startups semeadas com sucesso!");
     }
 
     // Populando carteira do usuário atual (se logado)
