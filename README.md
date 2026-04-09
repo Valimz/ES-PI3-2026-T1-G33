@@ -58,7 +58,7 @@ ES-PI3-2026-T1-G33/
 ├── backend/            
 │   ├── src/
 │   ├── package.json
-│   └── .env.example
+│   └── .env.exemplo
 ├── mobile/             
 │   ├── lib/
 │   └── pubspec.yaml
