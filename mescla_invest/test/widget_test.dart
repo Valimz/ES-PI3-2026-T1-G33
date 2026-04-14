@@ -1,3 +1,6 @@
+// Nome: Felipe Augusto dos Santos Silva
+// RA: 25003353
+
 // This is a basic Flutter widget test.
 //
 // To perform an interaction with a widget in your test, use the WidgetTester
@@ -7,9 +10,10 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mescla_invest/main.dart';
+import 'package:mescla_invest/core/app.dart';
 
 void main() {
+  // Valida se a tela principal da feature de análise é renderizada corretamente.
   testWidgets('Renderiza tela de analise com filtros de periodo', (
     WidgetTester tester,
   ) async {
