@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/analise/presentation/pages/analise_graficos_page.dart';
+import 'package:mescla_invest/features/esqueci-senha/presentation/pages/esqueci_senha_page.dart';
 
 // Widget raiz do app com configuração global de navegação e tema.
 class MesclaInvestApp extends StatelessWidget {
@@ -16,7 +17,7 @@ class MesclaInvestApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // Tema único compartilhado para todas as telas.
       theme: AppTheme.light(),
-      home: const AnaliseGraficosPage(),
+      home: const EsqueciSenhaPage(),
     );
   }
 }
