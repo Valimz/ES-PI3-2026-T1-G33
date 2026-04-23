@@ -2,10 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main.dart'; // Para acessar AppColors
 import 'package:treino_de_tela/services/firestore_service.dart';
+import 'package:treino_de_tela/services/backend_service.dart';
 import 'transaction_details_page.dart';
 
-class WalletPage extends StatelessWidget {
+class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
+
+  @override
+  State<WalletPage> createState() => _WalletPageState();
+}
+
+class _WalletPageState extends State<WalletPage> {
+  late final Stream<Map<String, dynamic>?> _walletStream;
+  late final Stream<List<Map<String, dynamic>>> _assetsStream;
+  late final Stream<List<Map<String, dynamic>>> _acquisitionsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    // Conecta o socket ao abrir a carteira
+    BackendService().connectSocket();
+
+    // Novas fontes baseadas no Servidor TS
+    _walletStream = BackendService().getWalletData();
+    _assetsStream = BackendService().getUserAssets();
+    
+    // Ainda no FirestoreService (Pendente migração Fase 5)
+    _acquisitionsStream = FirestoreService().getUserAcquisitions();
+  }
+
+  @override
+  void dispose() {
+    // BackendService().disconnectSocket(); // Opcional se quisermos manter a vida útil do socket, mas boas práticas ditam desconectar ao sair.
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +94,7 @@ class WalletPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
       ),
       child: StreamBuilder<Map<String, dynamic>?>(
-        stream: FirestoreService().getWalletData(),
+        stream: _walletStream,
         builder: (context, snapshot) {
           final wallet = snapshot.data;
           final balance = wallet?['balance'] ?? 'R\$ 0,00';
@@ -147,7 +177,7 @@ class WalletPage extends StatelessWidget {
 
   Widget _buildAssetList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: FirestoreService().getUserAssets(),
+      stream: _assetsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -379,7 +409,7 @@ class WalletPage extends StatelessWidget {
 
   Widget _buildAcquisitionsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: FirestoreService().getUserAcquisitions(),
+      stream: _acquisitionsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(

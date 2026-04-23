@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'main.dart'; // Para acessar AppColors
 import 'package:treino_de_tela/services/firestore_service.dart';
@@ -13,12 +14,13 @@ class _ExplorePageState extends State<ExplorePage> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, String>> _allStartups = [];
   List<Map<String, String>> _filteredStartups = [];
+  late final StreamSubscription<List<Map<String, dynamic>>> _startupsSubscription;
 
   @override
   void initState() {
     super.initState();
     // Iniciar escuta das startups do Firebase
-    FirestoreService().getStartups().listen((startups) {
+    _startupsSubscription = FirestoreService().getStartups().listen((startups) {
       if (!mounted) return;
       setState(() {
         _allStartups = startups.map((e) => e.map((k, v) => MapEntry(k, v.toString()))).toList();
@@ -31,6 +33,7 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _startupsSubscription.cancel();
     super.dispose();
   }
 

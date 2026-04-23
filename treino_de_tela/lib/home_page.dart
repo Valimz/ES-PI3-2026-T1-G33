@@ -1,9 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'main.dart'; // Para acessar AppColors
 import 'package:treino_de_tela/services/firestore_service.dart';
-
-class HomePage extends StatelessWidget {
+import 'package:treino_de_tela/services/backend_service.dart';
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final Stream<Map<String, dynamic>?> _walletStream;
+  late final Stream<List<Map<String, dynamic>>> _assetsStream;
+  late final Stream<List<Map<String, dynamic>>> _startupsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _walletStream = FirestoreService().getWalletData();
+    _assetsStream = FirestoreService().getUserAssets();
+    _startupsStream = FirestoreService().getStartups();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +35,17 @@ class HomePage extends StatelessWidget {
             icon: const Icon(Icons.notifications_none, color: Colors.white),
             onPressed: () {},
           ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+              }
+            },
+            tooltip: 'Sair da Conta',
+          ),
+          const SizedBox(width: 8),
           const CircleAvatar(
             backgroundColor: AppColors.accent,
             radius: 16,
@@ -41,6 +70,7 @@ class HomePage extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         currentIndex: 0,
@@ -51,11 +81,15 @@ class HomePage extends StatelessWidget {
           if (index == 2) {
             Navigator.pushNamed(context, '/wallet');
           }
+          if (index == 3) {
+            Navigator.pushNamed(context, '/p2p');
+          }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explorar'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Carteira'),
+          BottomNavigationBarItem(icon: Icon(Icons.storefront), label: 'Mercado P2P'),
         ],
       ),
     );
@@ -73,7 +107,7 @@ class HomePage extends StatelessWidget {
         ),
       ),
       child: StreamBuilder<Map<String, dynamic>?>(
-        stream: FirestoreService().getWalletData(),
+        stream: _walletStream,
         builder: (context, snapshot) {
           final wallet = snapshot.data;
           final balance = wallet?['balance'] ?? 'R\$ 0,00';
@@ -139,10 +173,10 @@ class HomePage extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: FirestoreService().getUserAssets(),
+        stream: _assetsStream,
         builder: (context, assetsSnapshot) {
           return StreamBuilder<List<Map<String, dynamic>>>(
-            stream: FirestoreService().getStartups(),
+            stream: _startupsStream,
             builder: (context, startupsSnapshot) {
               String appreciationText = '+ 0,0%';
               Color appreciationColor = AppColors.accent;
@@ -216,7 +250,7 @@ class HomePage extends StatelessWidget {
     return SizedBox(
       height: 180,
       child: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: FirestoreService().getStartups(),
+        stream: _startupsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -369,7 +403,7 @@ class HomePage extends StatelessWidget {
                   
                   // Dropdown para Startups
                   StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: FirestoreService().getStartups(),
+                    stream: _startupsStream,
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const CircularProgressIndicator();
                       final startups = snapshot.data!;
@@ -379,7 +413,7 @@ class HomePage extends StatelessWidget {
                           labelText: 'Selecione a Startup',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        value: selectedStartupId,
+                        initialValue: selectedStartupId,
                         items: startups.map((startup) {
                           final id = startup['id']?.toString() ?? startup['name'] as String;
                           return DropdownMenuItem<String>(

@@ -6,6 +6,7 @@ import 'package:treino_de_tela/home_page.dart';
 import 'package:treino_de_tela/login_page.dart';
 import 'package:treino_de_tela/register_page.dart';
 import 'package:treino_de_tela/wallet_page.dart';
+import 'package:treino_de_tela/p2p_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +65,7 @@ class MainApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/explore': (context) => const ExplorePage(),
         '/wallet': (context) => const WalletPage(),
+        '/p2p': (context) => const P2PPage(),
       },
     );
   }
