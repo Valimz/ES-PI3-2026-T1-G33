@@ -1,6 +1,7 @@
 import 'package:mescla_invest/features/portfolio/models/posicao_model.dart';
 import 'package:mescla_invest/features/portfolio/models/variacao_model.dart';
 
+// Representa um ativo do portfólio com seus dados de posição e variação.
 class InvestimentoModel {
   final String id;
   final String ticker;
