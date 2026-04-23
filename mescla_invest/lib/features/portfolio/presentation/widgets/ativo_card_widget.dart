@@ -12,6 +12,7 @@ class AtivoCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A direção da variação controla ícone e cor de destaque do card.
     final variacao = ativo.variacao.variacaoPercentual;
     final isPositiva = variacao >= 0;
     final corVariacao = isPositiva
@@ -96,6 +97,7 @@ class AtivoCardWidget extends StatelessWidget {
   }
 
   String _formatarMoeda(double valor) {
+    // Mantém o mesmo padrão visual de moeda usado no restante da tela.
     final valorAbsoluto = valor.abs().toStringAsFixed(2).replaceAll('.', ',');
     return 'R\$ $valorAbsoluto';
   }

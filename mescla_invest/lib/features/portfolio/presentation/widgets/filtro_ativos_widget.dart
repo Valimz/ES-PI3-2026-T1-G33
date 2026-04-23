@@ -26,6 +26,7 @@ class FiltroAtivosWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Renderiza os filtros de forma compacta para caber em telas menores.
     return Wrap(
       spacing: 8,
       runSpacing: 8,

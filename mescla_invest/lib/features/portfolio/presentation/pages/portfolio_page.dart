@@ -21,6 +21,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Recalcula os indicadores a partir do filtro ativo para manter o resumo coerente.
     final ativosFiltrados = _filtrarAtivos(mockPortfolio, _filtroSelecionado);
     final valorTotal = _valorTotalCarteira(ativosFiltrados);
     final variacaoReais = _variacaoTotalEmReais(ativosFiltrados);
@@ -80,6 +81,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
     List<InvestimentoModel> ativos,
     FiltroAtivo filtro,
   ) {
+    // Usa uma heurística simples no ticker para separar ações de cripto.
     switch (filtro) {
       case FiltroAtivo.todos:
         return ativos;
@@ -114,6 +116,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   double _variacaoTotalPercentual(double valorTotal, double variacaoReais) {
+    // Evita divisão por zero quando ainda não há base de cálculo.
     final base = valorTotal - variacaoReais;
     if (base == 0) {
       return 0;

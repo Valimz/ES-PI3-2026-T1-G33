@@ -18,6 +18,7 @@ class ResumoPortfolioHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Define a cor do destaque de acordo com o resultado consolidado da carteira.
     final isPositiva = variacaoEmReais >= 0;
     final corVariacao = isPositiva
         ? const Color(0xFF166534)
@@ -70,6 +71,7 @@ class ResumoPortfolioHeader extends StatelessWidget {
   }
 
   String _formatarMoeda(double valor) {
+    // Formata com padrão brasileiro sem depender de pacote extra.
     final valorAbsoluto = valor.abs().toStringAsFixed(2).replaceAll('.', ',');
     return 'R\$ $valorAbsoluto';
   }

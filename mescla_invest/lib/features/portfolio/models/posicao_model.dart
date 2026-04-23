@@ -1,3 +1,4 @@
+// Agrupa os dados de quantidade, custo médio e valor atual da posição.
 class PosicaoModel {
   final double quantidade;
   final double precoMedio;
