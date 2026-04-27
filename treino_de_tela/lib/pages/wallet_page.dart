@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'main.dart'; // Para acessar AppColors
+import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
 import 'package:treino_de_tela/services/backend_service.dart';
-import 'transaction_details_page.dart';
+import 'package:treino_de_tela/pages/transaction_details_page.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});

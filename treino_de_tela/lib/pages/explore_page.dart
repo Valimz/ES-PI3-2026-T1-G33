@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'main.dart'; // Para acessar AppColors
+import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
 
 class ExplorePage extends StatefulWidget {
