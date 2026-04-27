@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:treino_de_tela/main.dart'; // AppColors
+import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
