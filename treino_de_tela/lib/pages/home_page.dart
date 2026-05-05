@@ -403,7 +403,7 @@ class _HomePageState extends State<HomePage> {
                   
                   // Dropdown para Startups
                   StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: _startupsStream,
+                    stream: FirestoreService().getStartups(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const CircularProgressIndicator();
                       final startups = snapshot.data!;

@@ -13,7 +13,7 @@ class FirestoreService {
           final data = doc.data();
           data['id'] = doc.id;
           return data;
-        }).toList());
+        }).toList()).asBroadcastStream();
   }
 
   // Stream para obter os dados da carteira do usuário logado
@@ -26,7 +26,7 @@ class FirestoreService {
         return snapshot.data();
       }
       return null;
-    });
+    }).asBroadcastStream();
   }
 
   // Stream para listar os ativos comprados pelo usuário
@@ -38,7 +38,7 @@ class FirestoreService {
           final data = doc.data();
           data['id'] = doc.id;
           return data;
-        }).toList());
+        }).toList()).asBroadcastStream();
   }
 
   // Stream para listar histórico de aquisições/transações
@@ -52,7 +52,7 @@ class FirestoreService {
           final data = doc.data();
           data['id'] = doc.id;
           return data;
-        }).toList());
+        }).toList()).asBroadcastStream();
   }
 
   // --- MÉTODOS DE NEGOCIAÇÃO E CARTEIRA ---
@@ -267,7 +267,7 @@ class FirestoreService {
             })
             // Opcional: filtrar no cliente se quiser esconder do próprio dono
             .where((offer) => offer['sellerId'] != user.uid)
-            .toList());
+            .toList()).asBroadcastStream();
   }
 
   Stream<List<Map<String, dynamic>>> getMyP2POffers() {
@@ -282,7 +282,7 @@ class FirestoreService {
               final data = doc.data();
               data['id'] = doc.id;
               return data;
-            }).toList());
+            }).toList()).asBroadcastStream();
   }
 
   Future<void> makeCounterOffer(String offerId, double proposedPrice) async {
@@ -305,7 +305,7 @@ class FirestoreService {
               final data = doc.data();
               data['id'] = doc.id;
               return data;
-            }).toList());
+            }).toList()).asBroadcastStream();
   }
 
   Future<void> acceptP2POffer(String offerId, {double? acceptedPrice, String? buyerIdParam}) async {
