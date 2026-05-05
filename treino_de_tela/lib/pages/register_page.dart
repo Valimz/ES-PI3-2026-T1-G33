@@ -15,6 +15,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _cpfController = TextEditingController();
+  final _telefoneController = TextEditingController();
   bool _obscureSenha = true;
 
   @override
@@ -119,6 +121,32 @@ class _RegisterPageState extends State<RegisterPage> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 20),
+                _buildFieldLabel("CPF"),
+                TextFormField(
+                  controller: _cpfController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: "000.000.000-00",
+                    prefixIcon: Icon(Icons.badge_outlined, size: 20),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira seu CPF';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                _buildFieldLabel("Telefone (Opcional)"),
+                TextFormField(
+                  controller: _telefoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    hintText: "(11) 99999-9999",
+                    prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                  ),
+                ),
                 const SizedBox(height: 40),
                 ElevatedButton(
                   onPressed: () async {
@@ -129,6 +157,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           _usernameController.text,
                           _emailController.text,
                           _passwordController.text,
+                          _cpfController.text,
+                          telefone: _telefoneController.text,
                         );
                         if (!context.mounted) return;
                         Navigator.pushReplacement(

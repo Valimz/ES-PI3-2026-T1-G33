@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
+import 'package:treino_de_tela/services/backend_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class P2PPage extends StatefulWidget {
@@ -147,7 +148,7 @@ class _P2PPageState extends State<P2PPage> {
                         final price = double.tryParse(priceController.text.replaceAll(',', '.'));
                         if (selectedAssetDetails != null && price != null && price > 0) {
                           try {
-                            await FirestoreService().createP2POffer(selectedAssetDetails!, price);
+                            await BackendService().createP2POffer(selectedAssetDetails!, price);
                             if(context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Oferta criada com sucesso!")));
@@ -283,7 +284,7 @@ class _MarketTab extends StatelessWidget {
                 final price = double.tryParse(priceController.text.replaceAll(',', '.'));
                 if (price != null && price > 0) {
                   try {
-                    await FirestoreService().makeCounterOffer(offer['id'], price);
+                    await BackendService().makeCounterOffer(offer['id'], price);
                     if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contraproposta enviada!')));
@@ -306,7 +307,7 @@ class _MarketTab extends StatelessWidget {
   void _acceptOffer(BuildContext context, Map<String, dynamic> offer) async {
     try {
       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-      await FirestoreService().acceptP2POffer(offer['id']);
+      await BackendService().acceptP2POffer(offer['id']);
       if (context.mounted) {
         Navigator.pop(context); // Tira o dialog
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Compra realizada com sucesso!')));
@@ -382,7 +383,7 @@ class _MyOffersTab extends StatelessWidget {
                                 onPressed: () async {
                                    try {
                                       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-                                      await FirestoreService().acceptCounterOffer(offer['id'], n['id'], n['proposedPrice'] as double);
+                                      await BackendService().acceptP2POffer(offer['id'], acceptedPrice: n['proposedPrice'] as double, buyerIdParam: n['id'], negotiationId: n['id']);
                                       if (context.mounted) {
                                         Navigator.pop(context);
                                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proposta aceita com sucesso!')));

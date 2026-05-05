@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -26,18 +27,39 @@ class FirebaseAuthService {
     }
   }
 
-  // Registro com Email, Senha e Nome
-  Future<User?> registerWithEmailAndPassword(String name, String email, String password) async {
+  // Registro com Email, Senha, Nome, CPF e Telefone (opcional)
+  Future<User?> registerWithEmailAndPassword(String name, String email, String password, String cpf, {String? telefone}) async {
     try {
       UserCredential credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       
-      // Atualiza o nome de exibição (Display Name)
+      // Atualiza o nome de exibição (Display Name) no Auth
       await credential.user?.updateDisplayName(name);
       
-      return credential.user;
+      // Criar o documento do usuário no Firestore
+      final user = credential.user;
+      if (user != null) {
+        final FirebaseFirestore db = FirebaseFirestore.instance;
+        final docRef = db.collection('users').doc(user.uid);
+        
+        await docRef.set({
+          'nome': name,
+          'email': email,
+          'cpf': cpf,
+          if (telefone != null && telefone.isNotEmpty) 'telefone': telefone,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Inicializar a carteira (wallet)
+        await docRef.collection('wallet').doc('main').set({
+          'balance': 'R\$ 0,00',
+          'appreciation': '+ 0,0%',
+        });
+      }
+      
+      return user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         throw Exception('A senha fornecida é muito fraca.');

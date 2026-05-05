@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:treino_de_tela/theme/app_colors.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
+import 'package:treino_de_tela/services/backend_service.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -255,7 +256,7 @@ class _HomePageState extends State<HomePage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text("Erro ao carregar startups."));
+            return Center(child: Text("Erro ao carregar startups: ${snapshot.error}"));
           }
           
           final startups = snapshot.data ?? [];
@@ -347,7 +348,7 @@ class _HomePageState extends State<HomePage> {
                     final value = double.tryParse(amountController.text.replaceAll(',', '.'));
                     if (value != null && value > 0) {
                       try {
-                        await FirestoreService().addFunds(value);
+                        await BackendService().addFunds(value);
                         if(context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Fundos adicionados com sucesso!")));
@@ -459,7 +460,7 @@ class _HomePageState extends State<HomePage> {
                         final value = double.tryParse(amountController.text.replaceAll(',', '.'));
                         if (selectedStartupDetails != null && value != null && value > 0) {
                           try {
-                            await FirestoreService().negotiateAsset(selectedStartupDetails!, value);
+                            await BackendService().negotiateAsset(selectedStartupDetails!, value);
                             if(context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Investimento realizado com sucesso!")));

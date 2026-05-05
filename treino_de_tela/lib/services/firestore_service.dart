@@ -431,6 +431,10 @@ class FirestoreService {
         {"name": "FinSol", "stage": "Em operação", "val": "R\$ 28,75"},
         {"name": "Educa+", "stage": "Nova", "val": "R\$ 7,50"},
         {"name": "Mobility Z", "stage": "Em expansão", "val": "R\$ 98,00"},
+        {"name": "Aura IA", "stage": "Nova", "val": "R\$ 21,30"},
+        {"name": "CleanEnergy", "stage": "Semente", "val": "R\$ 2,50"},
+        {"name": "SpaceT", "stage": "Em operação", "val": "R\$ 150,00"},
+        {"name": "BioGenesis", "stage": "Em expansão", "val": "R\$ 55,20"},
       ];
       
       for (var startup in initialStartups) {

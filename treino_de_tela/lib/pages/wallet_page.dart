@@ -353,7 +353,7 @@ class _WalletPageState extends State<WalletPage> {
                       onPressed: () async {
                         Navigator.pop(context); // close bottom sheet
                         try {
-                          await FirestoreService().sellAllAsset(asset);
+                          await BackendService().sellAllAsset(asset);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text("Todos os tokens de ${asset['name']} vendidos com sucesso!")),
