@@ -3,17 +3,18 @@
 
 import 'package:flutter/material.dart';
 
-enum FiltroAtivo {
+enum FiltroStartup {
   todos('Todos'),
-  acoes('Ações'),
-  cripto('Cripto');
+  nova('Nova'),
+  emOperacao('Em operação'),
+  emExpansao('Em expansão');
 
-  const FiltroAtivo(this.label);
+  const FiltroStartup(this.label);
 
   final String label;
 }
 
-// Barra de filtros para alternar o tipo de ativo exibido na carteira.
+// Barra de filtros para alternar o estágio de desenvolvimento das startups no portfólio.
 class FiltroAtivosWidget extends StatelessWidget {
   const FiltroAtivosWidget({
     super.key,
@@ -21,8 +22,8 @@ class FiltroAtivosWidget extends StatelessWidget {
     required this.onSelecionar,
   });
 
-  final FiltroAtivo selecionado;
-  final ValueChanged<FiltroAtivo> onSelecionar;
+  final FiltroStartup selecionado;
+  final ValueChanged<FiltroStartup> onSelecionar;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +31,7 @@ class FiltroAtivosWidget extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: FiltroAtivo.values
+      children: FiltroStartup.values
           .map(
             (filtro) => ChoiceChip(
               label: Text(filtro.label),
