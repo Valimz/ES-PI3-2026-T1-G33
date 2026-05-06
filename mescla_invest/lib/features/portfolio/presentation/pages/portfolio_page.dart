@@ -8,7 +8,7 @@ import 'package:mescla_invest/features/portfolio/presentation/widgets/ativo_card
 import 'package:mescla_invest/features/portfolio/presentation/widgets/filtro_ativos_widget.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/resumo_portfolio_header.dart';
 
-// Tela principal da carteira com resumo consolidado e lista de ativos.
+// Tela principal da carteira com resumo consolidado e lista de startups do Mescla.
 class PortfolioPage extends StatefulWidget {
   const PortfolioPage({super.key});
 
@@ -17,21 +17,21 @@ class PortfolioPage extends StatefulWidget {
 }
 
 class _PortfolioPageState extends State<PortfolioPage> {
-  FiltroAtivo _filtroSelecionado = FiltroAtivo.todos;
+  FiltroStartup _filtroSelecionado = FiltroStartup.todos;
 
   @override
   Widget build(BuildContext context) {
     // Recalcula os indicadores a partir do filtro ativo para manter o resumo coerente.
-    final ativosFiltrados = _filtrarAtivos(mockPortfolio, _filtroSelecionado);
-    final valorTotal = _valorTotalCarteira(ativosFiltrados);
-    final variacaoReais = _variacaoTotalEmReais(ativosFiltrados);
+    final investimentosFiltrados = _filtrarStartups(mockPortfolio, _filtroSelecionado);
+    final valorTotal = _valorTotalCarteira(investimentosFiltrados);
+    final variacaoReais = _variacaoTotalEmReais(investimentosFiltrados);
     final variacaoPercentual = _variacaoTotalPercentual(
       valorTotal,
       variacaoReais,
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Portfólio'), centerTitle: true),
+      appBar: AppBar(title: const Text('Meus Investimentos'), centerTitle: true),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -45,7 +45,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Filtrar ativos',
+                'Filtrar por estágio',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -57,16 +57,16 @@ class _PortfolioPageState extends State<PortfolioPage> {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: ativosFiltrados.isEmpty
+                child: investimentosFiltrados.isEmpty
                     ? const Center(
-                        child: Text('Nenhum ativo para o filtro selecionado.'),
+                        child: Text('Nenhum investimento para o filtro selecionado.'),
                       )
                     : ListView.separated(
-                        itemCount: ativosFiltrados.length,
+                        itemCount: investimentosFiltrados.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
-                          final ativo = ativosFiltrados[index];
-                          return AtivoCardWidget(ativo: ativo);
+                          final investimento = investimentosFiltrados[index];
+                          return AtivoCardWidget(ativo: investimento);
                         },
                       ),
               ),
@@ -77,41 +77,34 @@ class _PortfolioPageState extends State<PortfolioPage> {
     );
   }
 
-  List<InvestimentoModel> _filtrarAtivos(
-    List<InvestimentoModel> ativos,
-    FiltroAtivo filtro,
+  List<InvestimentoModel> _filtrarStartups(
+    List<InvestimentoModel> investimentos,
+    FiltroStartup filtro,
   ) {
-    // Usa uma heurística simples no ticker para separar ações de cripto.
     switch (filtro) {
-      case FiltroAtivo.todos:
-        return ativos;
-      case FiltroAtivo.acoes:
-        return ativos.where((ativo) => _isAcao(ativo.ticker)).toList();
-      case FiltroAtivo.cripto:
-        return ativos.where((ativo) => _isCripto(ativo.ticker)).toList();
+      case FiltroStartup.todos:
+        return investimentos;
+      case FiltroStartup.nova:
+        return investimentos.where((inv) => inv.estagio == EstagioStartup.nova).toList();
+      case FiltroStartup.emOperacao:
+        return investimentos.where((inv) => inv.estagio == EstagioStartup.emOperacao).toList();
+      case FiltroStartup.emExpansao:
+        return investimentos.where((inv) => inv.estagio == EstagioStartup.emExpansao).toList();
     }
   }
 
-  bool _isCripto(String ticker) {
-    return !RegExp(r'\d').hasMatch(ticker) && ticker.length <= 4;
-  }
-
-  bool _isAcao(String ticker) {
-    return RegExp(r'\d').hasMatch(ticker);
-  }
-
-  double _valorTotalCarteira(List<InvestimentoModel> ativos) {
-    return ativos.fold(
+  double _valorTotalCarteira(List<InvestimentoModel> investimentos) {
+    return investimentos.fold(
       0,
-      (acumulado, ativo) =>
-          acumulado + (ativo.posicao.quantidade * ativo.posicao.valorAtual),
+      (acumulado, inv) =>
+          acumulado + (inv.posicao.quantidade * inv.posicao.valorAtual),
     );
   }
 
-  double _variacaoTotalEmReais(List<InvestimentoModel> ativos) {
-    return ativos.fold(
+  double _variacaoTotalEmReais(List<InvestimentoModel> investimentos) {
+    return investimentos.fold(
       0,
-      (acumulado, ativo) => acumulado + ativo.variacao.variacaoEmReais,
+      (acumulado, inv) => acumulado + inv.variacao.variacaoEmReais,
     );
   }
 

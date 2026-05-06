@@ -1,3 +1,6 @@
+// Nome: Felipe Augusto dos Santos Silva
+// RA: 25003353
+
 // Agrupa os dados de quantidade, custo médio e valor atual da posição.
 class PosicaoModel {
   final double quantidade;
