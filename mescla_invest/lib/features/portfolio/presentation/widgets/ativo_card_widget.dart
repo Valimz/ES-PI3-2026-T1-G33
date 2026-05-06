@@ -1,10 +1,13 @@
 // Nome: Felipe Augusto dos Santos Silva
 // RA: 25003353
 
+// Nome: Felipe Augusto dos Santos Silva
+// RA: 25003353
+
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 
-// Card com os principais dados de posição e variação de um ativo.
+// Card com os principais dados da startup e da posição do investidor.
 class AtivoCardWidget extends StatelessWidget {
   const AtivoCardWidget({super.key, required this.ativo});
 
@@ -21,6 +24,7 @@ class AtivoCardWidget extends StatelessWidget {
     final icone = isPositiva ? Icons.trending_up : Icons.trending_down;
     final sinal = isPositiva ? '+' : '';
     final valorPosicao = ativo.posicao.quantidade * ativo.posicao.valorAtual;
+    // Sócios e mentores são exibidos em texto curto para manter o card compacto.
     final sociosResumo = _formatarListaComPercentuais(
       ativo.socios,
       ativo.participacaoSocietaria,
@@ -150,10 +154,12 @@ class AtivoCardWidget extends StatelessWidget {
     return 'R\$ $valorAbsoluto';
   }
 
+  // Formata valores inteiros sem máscara monetária.
   String _formatarInteiro(int valor) {
     return valor.toString();
   }
 
+  // Junta uma lista simples em um texto curto.
   String _formatarLista(List<String> valores) {
     if (valores.isEmpty) {
       return 'Não informado';
@@ -161,6 +167,7 @@ class AtivoCardWidget extends StatelessWidget {
     return valores.join(', ');
   }
 
+  // Combina nomes e percentuais de participação em uma única linha.
   String _formatarListaComPercentuais(
     List<String> nomes,
     List<double> percentuais,
@@ -194,6 +201,7 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Pequeno marcador visual reaproveitável para estágio, setor e status.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(

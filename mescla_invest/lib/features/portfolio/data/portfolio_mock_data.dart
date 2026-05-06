@@ -1,3 +1,6 @@
+// Nome: Felipe Augusto dos Santos Silva
+// RA: 25003353
+
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 import 'package:mescla_invest/features/portfolio/models/posicao_model.dart';
 import 'package:mescla_invest/features/portfolio/models/variacao_model.dart';
@@ -23,10 +26,7 @@ final List<InvestimentoModel> mockPortfolio = [
       precoMedio: 3.00,
       valorAtual: 3.50,
     ),
-    variacao: VariacaoModel(
-      variacaoPercentual: 16.67,
-      variacaoEmReais: 2500.0,
-    ),
+    variacao: VariacaoModel(variacaoPercentual: 16.67, variacaoEmReais: 2500.0),
   ),
   InvestimentoModel(
     id: '2',
@@ -69,10 +69,7 @@ final List<InvestimentoModel> mockPortfolio = [
       precoMedio: 2.00,
       valorAtual: 2.40,
     ),
-    variacao: VariacaoModel(
-      variacaoPercentual: 20.0,
-      variacaoEmReais: 1400.0,
-    ),
+    variacao: VariacaoModel(variacaoPercentual: 20.0, variacaoEmReais: 1400.0),
   ),
   InvestimentoModel(
     id: '4',
@@ -92,10 +89,7 @@ final List<InvestimentoModel> mockPortfolio = [
       precoMedio: 2.50,
       valorAtual: 2.75,
     ),
-    variacao: VariacaoModel(
-      variacaoPercentual: 10.0,
-      variacaoEmReais: 500.0,
-    ),
+    variacao: VariacaoModel(variacaoPercentual: 10.0, variacaoEmReais: 500.0),
   ),
   InvestimentoModel(
     id: '5',
@@ -115,9 +109,6 @@ final List<InvestimentoModel> mockPortfolio = [
       precoMedio: 2.25,
       valorAtual: 2.50,
     ),
-    variacao: VariacaoModel(
-      variacaoPercentual: 11.11,
-      variacaoEmReais: 625.0,
-    ),
+    variacao: VariacaoModel(variacaoPercentual: 11.11, variacaoEmReais: 625.0),
   ),
 ];

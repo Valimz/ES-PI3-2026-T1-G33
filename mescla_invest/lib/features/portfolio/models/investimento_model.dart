@@ -1,7 +1,10 @@
+// Nome: Felipe Augusto dos Santos Silva
+// RA: 25003353
+
 import 'package:mescla_invest/features/portfolio/models/posicao_model.dart';
 import 'package:mescla_invest/features/portfolio/models/variacao_model.dart';
 
-// Estágio de desenvolvimento da startup conforme documento de visão
+// Estágio de desenvolvimento da startup conforme documento de visão.
 enum EstagioStartup {
   nova('Nova'),
   emOperacao('Em operação'),
@@ -11,7 +14,7 @@ enum EstagioStartup {
   final String label;
 }
 
-// Status da startup
+// Status operacional da startup.
 enum StatusStartup {
   ativa('Ativa'),
   pausada('Pausada'),
@@ -22,7 +25,7 @@ enum StatusStartup {
 }
 
 /// Representa um investimento em startup do Mescla.
-/// Contém informações completas sobre a empresa, seus sócios, mentores e posição de investimento.
+/// Mantém dados institucionais da startup e a posição do investidor.
 class InvestimentoModel {
   final String id;
   final String nome;
@@ -36,7 +39,7 @@ class InvestimentoModel {
   final List<String> mentoresConselho; // Mentores/Conselheiros
   final String? videoDemo; // URL do vídeo (opcional)
   final StatusStartup status;
-  
+
   // Dados da posição de investimento do usuário
   final PosicaoModel posicao;
   final VariacaoModel variacao;
