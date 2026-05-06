@@ -11,21 +11,50 @@ enum EstagioStartup {
   final String label;
 }
 
-// Representa um investimento em startup do Mescla com seus dados de posição e variação.
+// Status da startup
+enum StatusStartup {
+  ativa('Ativa'),
+  pausada('Pausada'),
+  encerrada('Encerrada');
+
+  const StatusStartup(this.label);
+  final String label;
+}
+
+/// Representa um investimento em startup do Mescla.
+/// Contém informações completas sobre a empresa, seus sócios, mentores e posição de investimento.
 class InvestimentoModel {
   final String id;
-  final String ticker;
   final String nome;
+  final String descricao;
   final EstagioStartup estagio;
+  final String setor;
+  final double capitalAportado; // Em reais
+  final int tokensEmitidos; // Total de tokens da startup
+  final List<String> socios; // Nomes dos sócios
+  final List<double> participacaoSocietaria; // Percentuais correspondentes
+  final List<String> mentoresConselho; // Mentores/Conselheiros
+  final String? videoDemo; // URL do vídeo (opcional)
+  final StatusStartup status;
+  
+  // Dados da posição de investimento do usuário
   final PosicaoModel posicao;
   final VariacaoModel variacao;
 
   InvestimentoModel({
     required this.id,
-    required this.ticker,
     required this.nome,
+    required this.descricao,
     required this.estagio,
+    required this.setor,
+    required this.capitalAportado,
+    required this.tokensEmitidos,
+    required this.socios,
+    required this.participacaoSocietaria,
+    required this.mentoresConselho,
+    required this.videoDemo,
+    required this.status,
     required this.posicao,
     required this.variacao,
-    });
+  });
 }
