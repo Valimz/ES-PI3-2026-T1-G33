@@ -129,18 +129,18 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
       const sellerAssetsCollection = db.collection('users').doc(sellerId).collection('assets');
       const sellerAssetsQuery = await sellerAssetsCollection.where('name', '==', assetName).get();
       if (!sellerAssetsQuery.empty) {
-        const sDoc = sellerAssetsQuery.docs[0];
+        const sDoc = sellerAssetsQuery.docs[0]!;
         const sData = sDoc.data();
         const sQuotasStr = sData.amount?.toString().split(' ')[0] || '0';
         const sQuotas = parseFloat(sQuotasStr.replace(',', '.')) || 0.0;
         
         if (sQuotas <= quotas) { 
-          transaction.delete(sDoc.reference);
+          transaction.delete(sDoc.ref);
         } else {
           const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Cotas';
           const sVal = parseCurrency(sData.value?.toString() || 'R$ 0,00');
           const newVal = sVal - (sVal * (quotas/sQuotas));
-          transaction.update(sDoc.reference, {
+          transaction.update(sDoc.ref, {
             amount: `${(sQuotas - quotas).toFixed(1).replace('.', ',')}${prefix}`,
             value: formatCurrency(newVal > 0 ? newVal : 0)
           });
@@ -151,14 +151,14 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
       const buyerAssetsCollection = db.collection('users').doc(buyerId).collection('assets');
       const buyerAssetsQuery = await buyerAssetsCollection.where('name', '==', assetName).get();
       if (!buyerAssetsQuery.empty) {
-        const bDoc = buyerAssetsQuery.docs[0];
+        const bDoc = buyerAssetsQuery.docs[0]!;
         const bData = bDoc.data();
         const bQuotasStr = bData.amount?.toString().split(' ')[0] || '0';
         const bQuotas = parseFloat(bQuotasStr.replace(',', '.')) || 0.0;
         const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Cotas';
         const bVal = parseCurrency(bData.value?.toString() || 'R$ 0,00');
 
-        transaction.update(bDoc.reference, {
+        transaction.update(bDoc.ref, {
           amount: `${(bQuotas + quotas).toFixed(1).replace('.', ',')}${prefix}`,
           value: formatCurrency(bVal + price)
         });

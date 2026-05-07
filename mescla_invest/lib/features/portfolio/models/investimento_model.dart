@@ -1,10 +1,6 @@
-// Nome: Felipe Augusto dos Santos Silva
-// RA: 25003353
-
 import 'package:mescla_invest/features/portfolio/models/posicao_model.dart';
 import 'package:mescla_invest/features/portfolio/models/variacao_model.dart';
 
-// Estágio de desenvolvimento da startup conforme documento de visão.
 enum EstagioStartup {
   nova('Nova'),
   emOperacao('Em operação'),
@@ -14,7 +10,6 @@ enum EstagioStartup {
   final String label;
 }
 
-// Status operacional da startup.
 enum StatusStartup {
   ativa('Ativa'),
   pausada('Pausada'),
@@ -24,23 +19,19 @@ enum StatusStartup {
   final String label;
 }
 
-/// Representa um investimento em startup do Mescla.
-/// Mantém dados institucionais da startup e a posição do investidor.
 class InvestimentoModel {
   final String id;
   final String nome;
   final String descricao;
   final EstagioStartup estagio;
   final String setor;
-  final double capitalAportado; // Em reais
-  final int tokensEmitidos; // Total de tokens da startup
-  final List<String> socios; // Nomes dos sócios
-  final List<double> participacaoSocietaria; // Percentuais correspondentes
-  final List<String> mentoresConselho; // Mentores/Conselheiros
-  final String? videoDemo; // URL do vídeo (opcional)
+  final double capitalAportado;
+  final int tokensEmitidos;
+  final List<String> socios;
+  final List<double> participacaoSocietaria;
+  final List<String> mentoresConselho;
+  final String? videoDemo;
   final StatusStartup status;
-
-  // Dados da posição de investimento do usuário
   final PosicaoModel posicao;
   final VariacaoModel variacao;
 
@@ -60,4 +51,67 @@ class InvestimentoModel {
     required this.posicao,
     required this.variacao,
   });
+
+  // Constrói um InvestimentoModel a partir de docs do Firestore.
+  // startupDoc: documento da coleção 'startups'
+  // assetDoc: documento de 'users/{uid}/assets' (pode ser null se usuário não tem posição)
+  factory InvestimentoModel.fromFirestore(
+    Map<String, dynamic> startupDoc, {
+    Map<String, dynamic>? assetDoc,
+  }) {
+    final precoAtualStr = startupDoc['val']?.toString() ?? 'R\$ 0,00';
+    final precoAtual = _parseCurrency(precoAtualStr);
+
+    double quantidade = 0.0;
+    double precoMedio = 0.0;
+    double valorInvestido = 0.0;
+
+    if (assetDoc != null) {
+      final amountStr = assetDoc['amount']?.toString().split(' ').first ?? '0';
+      quantidade = double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
+      valorInvestido = _parseCurrency(assetDoc['value']?.toString() ?? 'R\$ 0,00');
+      precoMedio = quantidade > 0 ? valorInvestido / quantidade : 0.0;
+    }
+
+    final valorAtualPosicao = quantidade * precoAtual;
+    final variacaoReais = valorAtualPosicao - valorInvestido;
+    final variacaoPercentual =
+        valorInvestido > 0 ? (variacaoReais / valorInvestido) * 100 : 0.0;
+
+    final stageStr = startupDoc['stage']?.toString().toLowerCase() ?? '';
+    final estagio = stageStr.contains('expans')
+        ? EstagioStartup.emExpansao
+        : stageStr.contains('opera')
+            ? EstagioStartup.emOperacao
+            : EstagioStartup.nova;
+
+    return InvestimentoModel(
+      id: startupDoc['id']?.toString() ?? startupDoc['name'] ?? '',
+      nome: startupDoc['name']?.toString() ?? '',
+      descricao: startupDoc['description']?.toString() ?? '',
+      estagio: estagio,
+      setor: startupDoc['sector']?.toString() ?? '',
+      capitalAportado: precoAtual,
+      tokensEmitidos: 0,
+      socios: [],
+      participacaoSocietaria: [],
+      mentoresConselho: [],
+      videoDemo: null,
+      status: StatusStartup.ativa,
+      posicao: PosicaoModel(
+        quantidade: quantidade,
+        precoMedio: precoMedio,
+        valorAtual: precoAtual,
+      ),
+      variacao: VariacaoModel(
+        variacaoPercentual: variacaoPercentual,
+        variacaoEmReais: variacaoReais,
+      ),
+    );
+  }
+
+  static double _parseCurrency(String value) {
+    final cleaned = value.replaceAll(RegExp(r'[^\d,.]'), '').replaceAll(',', '.');
+    return double.tryParse(cleaned) ?? 0.0;
+  }
 }

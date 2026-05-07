@@ -42,7 +42,8 @@ class _FormMfaState extends State<FormMfa> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Código validado'),
-          content: const Text('O MFA foi ativado com sucesso no modo de demonstração.'),
+          content: const Text(
+              'O MFA foi ativado com sucesso no modo de demonstração.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -52,9 +53,7 @@ class _FormMfaState extends State<FormMfa> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -67,12 +66,12 @@ class _FormMfaState extends State<FormMfa> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Novo código enviado para o dispositivo cadastrado.')),
+        const SnackBar(
+            content:
+                Text('Novo código enviado para o dispositivo cadastrado.')),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isResending = false);
-      }
+      if (mounted) setState(() => _isResending = false);
     }
   }
 
@@ -87,7 +86,10 @@ class _FormMfaState extends State<FormMfa> {
           const SizedBox(height: 20),
           Text(
             'Ativação do código de segurança',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
@@ -115,20 +117,20 @@ class _FormMfaState extends State<FormMfa> {
           ElevatedButton(
             onPressed: _isSubmitting ? null : _submit,
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
+                padding: const EdgeInsets.symmetric(vertical: 16)),
             child: _isSubmitting
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Text('Ativar MFA'),
           ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: _isResending ? null : _resendCode,
-            child: _isResending ? const Text('Reenviando...') : const Text('Reenviar código'),
+            child: _isResending
+                ? const Text('Reenviando...')
+                : const Text('Reenviar código'),
           ),
         ],
       ),
