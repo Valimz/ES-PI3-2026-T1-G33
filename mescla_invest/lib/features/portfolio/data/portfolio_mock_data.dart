@@ -21,6 +21,11 @@ final List<InvestimentoModel> mockPortfolio = [
     mentoresConselho: ['Mariana Prado'],
     videoDemo: 'https://exemplo.com/demo1',
     status: StatusStartup.ativa,
+    sumarioExecutivo: 'EcoTech monitora emissões e consumo de recursos naturais em tempo real, ajudando empresas a cumprirem metas ESG com dashboards automatizados e relatórios regulatórios.',
+    perguntasRespostas: [
+      {'pergunta': 'Quais setores são atendidos?', 'resposta': 'Indústria, mineração e logística são os principais segmentos atendidos atualmente.'},
+      {'pergunta': 'Como é feita a coleta de dados?', 'resposta': 'Via sensores IoT instalados nas instalações e integração com ERPs já existentes.'},
+    ],
     posicao: PosicaoModel(
       quantidade: 5000.0,
       precoMedio: 3.00,
@@ -41,6 +46,11 @@ final List<InvestimentoModel> mockPortfolio = [
     mentoresConselho: ['Ricardo Santos'],
     videoDemo: 'https://exemplo.com/demo2',
     status: StatusStartup.ativa,
+    sumarioExecutivo: 'FinFlow automatiza conciliação bancária, projeções de caixa e emissão de DRE para MEIs, reduzindo em 70% o tempo gasto com gestão financeira manual.',
+    perguntasRespostas: [
+      {'pergunta': 'É necessário conhecimento contábil?', 'resposta': 'Não. A plataforma foi desenhada para empreendedores sem formação financeira, com linguagem simples e visual.'},
+      {'pergunta': 'Integra com bancos?', 'resposta': 'Sim, via Open Finance integramos com mais de 15 instituições financeiras automaticamente.'},
+    ],
     posicao: PosicaoModel(
       quantidade: 8000.0,
       precoMedio: 2.00,
@@ -64,6 +74,11 @@ final List<InvestimentoModel> mockPortfolio = [
     mentoresConselho: ['Arnaldo Souza'],
     videoDemo: 'https://exemplo.com/demo3',
     status: StatusStartup.ativa,
+    sumarioExecutivo: 'AgroSmart instala sensores de umidade e temperatura no solo que, integrados à previsão climática, automatizam válvulas de irrigação e reduzem o consumo de água em até 35%.',
+    perguntasRespostas: [
+      {'pergunta': 'Funciona sem internet no campo?', 'resposta': 'Sim, os sensores operam offline e sincronizam os dados quando há sinal disponível.'},
+      {'pergunta': 'Qual o prazo de retorno do investimento para o produtor?', 'resposta': 'Em média 18 meses, considerando a redução na conta de energia e no desperdício de água.'},
+    ],
     posicao: PosicaoModel(
       quantidade: 3500.0,
       precoMedio: 2.00,
@@ -84,6 +99,11 @@ final List<InvestimentoModel> mockPortfolio = [
     mentoresConselho: ['Sandra Meireles'],
     videoDemo: 'https://exemplo.com/demo4',
     status: StatusStartup.ativa,
+    sumarioExecutivo: 'HealthVibe oferece triagem médica por IA antes da consulta, reduzindo em 40% o tempo de espera e direcionando o paciente ao especialista correto já na primeira consulta.',
+    perguntasRespostas: [
+      {'pergunta': 'A triagem por IA é segura?', 'resposta': 'Sim, o modelo foi treinado com mais de 2 milhões de casos clínicos e validado por um comitê médico independente.'},
+      {'pergunta': 'Atende planos de saúde?', 'resposta': 'Temos convênio com 8 operadoras de planos de saúde e também atendimento particular.'},
+    ],
     posicao: PosicaoModel(
       quantidade: 2000.0,
       precoMedio: 2.50,
@@ -104,6 +124,11 @@ final List<InvestimentoModel> mockPortfolio = [
     mentoresConselho: ['Fernando Silva'],
     videoDemo: 'https://exemplo.com/demo5',
     status: StatusStartup.ativa,
+    sumarioExecutivo: 'EduNext transforma conteúdo técnico em missões, conquistas e rankings, aumentando a taxa de conclusão de cursos online de 15% para 68% nos pilotos realizados.',
+    perguntasRespostas: [
+      {'pergunta': 'Quais áreas de conhecimento são cobertas?', 'resposta': 'Programação, design, marketing digital e empreendedorismo são as trilhas principais no lançamento.'},
+      {'pergunta': 'Há certificado reconhecido pelo MEC?', 'resposta': 'Estamos em processo de credenciamento junto ao MEC. Atualmente emitimos certificados com validade no mercado de trabalho parceiro.'},
+    ],
     posicao: PosicaoModel(
       quantidade: 2500.0,
       precoMedio: 2.25,

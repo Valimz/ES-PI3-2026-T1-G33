@@ -34,6 +34,8 @@ class InvestimentoModel {
   final StatusStartup status;
   final PosicaoModel posicao;
   final VariacaoModel variacao;
+  final String sumarioExecutivo;
+  final List<Map<String, dynamic>> perguntasRespostas;
 
   InvestimentoModel({
     required this.id,
@@ -50,6 +52,8 @@ class InvestimentoModel {
     required this.status,
     required this.posicao,
     required this.variacao,
+    required this.sumarioExecutivo,
+    required this.perguntasRespostas,
   });
 
   // Constrói um InvestimentoModel a partir de docs do Firestore.
@@ -91,12 +95,12 @@ class InvestimentoModel {
       descricao: startupDoc['description']?.toString() ?? '',
       estagio: estagio,
       setor: startupDoc['sector']?.toString() ?? '',
-      capitalAportado: precoAtual,
-      tokensEmitidos: 0,
-      socios: [],
+      capitalAportado: (startupDoc['capital'] as num?)?.toDouble() ?? precoAtual,
+      tokensEmitidos: (startupDoc['tokens'] as num?)?.toInt() ?? 0,
+      socios: List<String>.from(startupDoc['socios'] ?? []),
       participacaoSocietaria: [],
       mentoresConselho: [],
-      videoDemo: null,
+      videoDemo: startupDoc['videoDemo']?.toString(),
       status: StatusStartup.ativa,
       posicao: PosicaoModel(
         quantidade: quantidade,
@@ -107,6 +111,11 @@ class InvestimentoModel {
         variacaoPercentual: variacaoPercentual,
         variacaoEmReais: variacaoReais,
       ),
+      sumarioExecutivo: startupDoc['sumarioExecutivo']?.toString() ?? '',
+      perguntasRespostas: (startupDoc['perguntasRespostas'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [],
     );
   }
 
