@@ -17,7 +17,7 @@ void main() {
   testWidgets('Renderiza tela de analise com filtros de periodo', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MesclaInvestApp());
+    await tester.pumpWidget(const InvestApp());
 
     expect(find.text('Análise e Gráficos'), findsOneWidget);
     expect(find.text('Valorização da moeda'), findsOneWidget);
