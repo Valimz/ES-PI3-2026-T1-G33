@@ -31,7 +31,17 @@ class _PortfolioPageState extends State<PortfolioPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus Investimentos'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Meus Investimentos'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag),
+            tooltip: 'Marcos',
+            onPressed: () => Navigator.pushNamed(context, '/milestones'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

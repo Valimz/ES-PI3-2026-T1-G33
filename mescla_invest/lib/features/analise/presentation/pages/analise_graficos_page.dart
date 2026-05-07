@@ -41,7 +41,17 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
     final startupsDisponiveis = mockPortfolio;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Análise do Token'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Análise do Token'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag),
+            tooltip: 'Marcos',
+            onPressed: () => Navigator.pushNamed(context, '/milestones'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

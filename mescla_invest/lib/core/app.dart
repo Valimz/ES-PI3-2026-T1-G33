@@ -6,6 +6,7 @@ import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/analise/presentation/pages/analise_graficos_page.dart';
 import 'package:mescla_invest/features/mfa/presentation/pages/mfa_page.dart';
 import 'package:mescla_invest/features/portfolio/presentation/pages/portfolio_page.dart';
+import 'package:mescla_invest/features/milestones/presentation/pages/milestone_page.dart';
 import 'package:mescla_invest/features/esqueci-senha/presentation/pages/esqueci_senha_page.dart';
 
 // Widget raiz do app com configuração global de navegação e tema.
@@ -19,6 +20,9 @@ class MesclaInvestApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // Tema único compartilhado para todas as telas.
       theme: AppTheme.light(),
+      routes: {
+        '/milestones': (_) => const MilestonePage(),
+      },
       home: AnaliseGraficosPage(),
     );
   }
