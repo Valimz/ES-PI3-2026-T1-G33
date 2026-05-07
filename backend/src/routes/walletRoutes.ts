@@ -121,7 +121,7 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
 
       if (!querySnapshot.empty) {
         // Atualiza ativo existente
-        const assetDoc = querySnapshot.docs[0]!;
+        const assetDoc = querySnapshot.docs[0];
         const assetRef = assetDoc.ref;
         const assetData = assetDoc.data();
         
