@@ -8,7 +8,6 @@ import 'package:mescla_invest/features/mfa/presentation/pages/mfa_page.dart';
 import 'package:mescla_invest/features/portfolio/presentation/pages/portfolio_page.dart';
 import 'package:mescla_invest/features/esqueci-senha/presentation/pages/esqueci_senha_page.dart';
 
-
 // Widget raiz do app com configuração global de navegação e tema.
 class MesclaInvestApp extends StatelessWidget {
   const MesclaInvestApp({super.key});
@@ -20,9 +19,7 @@ class MesclaInvestApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // Tema único compartilhado para todas as telas.
       theme: AppTheme.light(),
-      home: const PortfolioPage(),
-
-
+      home: AnaliseGraficosPage(),
     );
   }
 }
