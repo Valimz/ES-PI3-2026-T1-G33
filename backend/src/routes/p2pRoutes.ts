@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { db, auth } from '../firebaseAdmin';
 import { parseCurrency, formatCurrency } from './walletRoutes';
+import { sendNotification } from './notificationRoutes';
 
 const router = Router();
 
@@ -46,6 +47,14 @@ router.post('/createOffer', requireAuth, async (req: Request, res: Response) => 
       createdAt: new Date()
     });
 
+    // Notificar o vendedor que sua oferta foi criada
+    await sendNotification(user.uid, {
+      title: 'Oferta P2P criada',
+      body: `Sua oferta de ${asset.name} por ${formatCurrency(price)} está ativa no mercado.`,
+      type: 'p2p_offer',
+      data: { startupName: asset.name, price: price.toString() },
+    });
+
     res.status(200).json({ message: 'Offer created successfully' });
   } catch (error: any) {
     console.error(error);
@@ -70,6 +79,18 @@ router.post('/makeCounterOffer', requireAuth, async (req: Request, res: Response
       status: 'pending',
       createdAt: new Date()
     });
+
+    // Notificar o vendedor sobre a contraproposta
+    const offerDoc = await db.collection('p2p_offers').doc(offerId).get();
+    if (offerDoc.exists) {
+      const offerData = offerDoc.data()!;
+      await sendNotification(offerData.sellerId, {
+        title: 'Nova contraproposta',
+        body: `Recebeu uma contraproposta de ${formatCurrency(proposedPrice)} para ${offerData.startupName}.`,
+        type: 'p2p_counter',
+        data: { offerId, proposedPrice: proposedPrice.toString() },
+      });
+    }
 
     res.status(200).json({ message: 'Counter offer made successfully' });
   } catch (error: any) {
@@ -181,6 +202,34 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
         transaction.update(negRef, { status: 'accepted' });
       }
     });
+
+    // Buscar dados da oferta para notificações
+    const finalOfferDoc = await db.collection('p2p_offers').doc(offerId).get();
+    const finalOfferData = finalOfferDoc.data();
+    const sellerId = finalOfferData?.sellerId || '';
+    const buyerId = buyerIdParam || user.uid;
+    const assetName = finalOfferData?.startupName || 'startup';
+    const finalPrice = acceptedPrice || finalOfferData?.price || 0;
+
+    // Notificar vendedor
+    if (sellerId) {
+      await sendNotification(sellerId, {
+        title: 'Oferta P2P concluída',
+        body: `Sua oferta de ${assetName} foi aceita por ${formatCurrency(finalPrice)}.`,
+        type: 'p2p_accepted',
+        data: { offerId, startupName: assetName },
+      });
+    }
+
+    // Notificar comprador
+    if (buyerId && buyerId !== sellerId) {
+      await sendNotification(buyerId, {
+        title: 'Compra P2P realizada',
+        body: `Você adquiriu ${assetName} por ${formatCurrency(finalPrice)} no mercado P2P.`,
+        type: 'p2p_accepted',
+        data: { offerId, startupName: assetName },
+      });
+    }
 
     res.status(200).json({ message: 'Offer accepted successfully' });
   } catch (error: any) {

@@ -31,7 +31,7 @@ io.on('connection', (socket: Socket) => {
 
   // Ouvir Carteira do Usuário (Wallet)
   const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
-  
+
   const unsubscribeWallet = walletRef.onSnapshot((doc) => {
     if (doc.exists) {
       socket.emit('wallet_update', doc.data());

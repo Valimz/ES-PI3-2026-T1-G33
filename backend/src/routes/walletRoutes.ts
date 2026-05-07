@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { db, auth } from '../firebaseAdmin';
+import { sendNotification } from './notificationRoutes';
 
 const router = Router();
 
@@ -72,6 +73,14 @@ router.post('/addFunds', requireAuth, async (req: Request, res: Response) => {
         amount: formatCurrency(amount),
         date: new Date() // No admin SDK we use Date or FieldValue
       });
+    });
+
+    // Enviar notificação
+    await sendNotification(user.uid, {
+      title: 'Depósito realizado',
+      body: `Você adicionou ${formatCurrency(amount)} à sua carteira.`,
+      type: 'deposit',
+      data: { amount: amount.toString() },
     });
 
     res.status(200).json({ message: 'Funds added successfully' });
@@ -157,6 +166,14 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
       });
     });
 
+    // Enviar notificação
+    await sendNotification(user.uid, {
+      title: 'Compra realizada',
+      body: `Você investiu ${formatCurrency(amountToBuy)} em ${startup.name}.`,
+      type: 'buy',
+      data: { startupName: startup.name, amount: amountToBuy.toString() },
+    });
+
     res.status(200).json({ message: 'Asset purchased successfully' });
   } catch (error: any) {
     console.error(error);
@@ -210,6 +227,14 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
         quotas: quotasStr,
         date: new Date()
       });
+    });
+
+    // Enviar notificação
+    await sendNotification(user.uid, {
+      title: 'Venda realizada',
+      body: `Você vendeu seus ativos de ${asset.name || 'startup'}.`,
+      type: 'sell',
+      data: { assetId: asset.id },
     });
 
     res.status(200).json({ message: 'Asset sold successfully' });

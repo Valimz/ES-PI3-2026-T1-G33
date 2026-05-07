@@ -4,6 +4,7 @@ import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/explore/presentation/widgets/startup_details_dialog.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 import 'package:mescla_invest/services/backend_service.dart';
+import 'package:mescla_invest/services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,9 +35,25 @@ class _HomePageState extends State<HomePage> {
         title: const Text('MesclaInvest',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
+          StreamBuilder<int>(
+            stream: NotificationService().getUnreadCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return IconButton(
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text(
+                    count > 99 ? '99+' : count.toString(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: const Color(0xFFDC2626),
+                  child: const Icon(Icons.notifications_none, color: Colors.white),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/notifications');
+                },
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
