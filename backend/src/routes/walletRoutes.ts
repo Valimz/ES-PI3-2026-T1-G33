@@ -122,7 +122,7 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
       if (!querySnapshot.empty) {
         // Atualiza ativo existente
         const assetDoc = querySnapshot.docs[0];
-        const assetRef = assetDoc.reference;
+        const assetRef = assetDoc.ref;
         const assetData = assetDoc.data();
         
         const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');

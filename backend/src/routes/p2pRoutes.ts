@@ -135,12 +135,12 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
         const sQuotas = parseFloat(sQuotasStr.replace(',', '.')) || 0.0;
         
         if (sQuotas <= quotas) { 
-          transaction.delete(sDoc.reference);
+          transaction.delete(sDoc.ref);
         } else {
           const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Cotas';
           const sVal = parseCurrency(sData.value?.toString() || 'R$ 0,00');
           const newVal = sVal - (sVal * (quotas/sQuotas));
-          transaction.update(sDoc.reference, {
+          transaction.update(sDoc.ref, {
             amount: `${(sQuotas - quotas).toFixed(1).replace('.', ',')}${prefix}`,
             value: formatCurrency(newVal > 0 ? newVal : 0)
           });
@@ -158,7 +158,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
         const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Cotas';
         const bVal = parseCurrency(bData.value?.toString() || 'R$ 0,00');
 
-        transaction.update(bDoc.reference, {
+        transaction.update(bDoc.ref, {
           amount: `${(bQuotas + quotas).toFixed(1).replace('.', ',')}${prefix}`,
           value: formatCurrency(bVal + price)
         });
