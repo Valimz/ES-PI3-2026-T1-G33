@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:treino_de_tela/theme/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'package:treino_de_tela/core/theme/app_theme.dart';
 
 class TransactionDetailsPage extends StatelessWidget {
   final Map<String, dynamic> transaction;
@@ -23,8 +23,10 @@ class TransactionDetailsPage extends StatelessWidget {
     String timeFormatted = "";
     if (transaction['date'] != null && transaction['date'] is Timestamp) {
       final DateTime date = (transaction['date'] as Timestamp).toDate();
-      dateFormatted = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
-      timeFormatted = "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+      dateFormatted =
+          "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+      timeFormatted =
+          "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
     }
 
     return Scaffold(
@@ -32,7 +34,8 @@ class TransactionDetailsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           "Detalhes da Transação",
-          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: AppColors.primary, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -64,8 +67,6 @@ class TransactionDetailsPage extends StatelessWidget {
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 40),
-            
-            // Cartão de detalhes
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -75,7 +76,11 @@ class TransactionDetailsPage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildDetailRow("Tipo", isBuy ? "Investimento" : "Transferência / Depósito"),
+                  _buildDetailRow(
+                      "Tipo",
+                      isBuy
+                          ? "Investimento"
+                          : "Transferência / Depósito"),
                   const Divider(height: 32),
                   _buildDetailRow("Descrição", title),
                   if (isBuy && quotas != null) ...[
@@ -87,11 +92,11 @@ class TransactionDetailsPage extends StatelessWidget {
                   const Divider(height: 32),
                   _buildDetailRow("Hora", timeFormatted),
                   const Divider(height: 32),
-                  _buildDetailRow("Comprovante ID", transaction['id'] ?? '---'),
+                  _buildDetailRow(
+                      "Comprovante ID", transaction['id'] ?? '---'),
                 ],
               ),
             ),
-
             const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
@@ -100,11 +105,15 @@ class TransactionDetailsPage extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text(
                   "Voltar",
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -118,13 +127,8 @@ class TransactionDetailsPage extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(fontSize: 16, color: Colors.grey)),
         Flexible(
           child: Text(
             value,

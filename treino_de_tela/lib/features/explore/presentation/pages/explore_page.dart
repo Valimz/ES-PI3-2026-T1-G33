@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:treino_de_tela/theme/app_colors.dart';
+import 'package:treino_de_tela/core/theme/app_theme.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -19,11 +19,12 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void initState() {
     super.initState();
-    // Iniciar escuta das startups do Firebase
     _startupsSubscription = FirestoreService().getStartups().listen((startups) {
       if (!mounted) return;
       setState(() {
-        _allStartups = startups.map((e) => e.map((k, v) => MapEntry(k, v.toString()))).toList();
+        _allStartups = startups
+            .map((e) => e.map((k, v) => MapEntry(k, v.toString())))
+            .toList();
         _filterStartups();
       });
     });
@@ -59,7 +60,8 @@ class _ExplorePageState extends State<ExplorePage> {
             prefixIcon: const Icon(Icons.search, color: AppColors.textBody),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide.none,
@@ -71,8 +73,7 @@ class _ExplorePageState extends State<ExplorePage> {
         padding: const EdgeInsets.all(16),
         itemCount: _filteredStartups.length,
         itemBuilder: (context, index) {
-          final startup = _filteredStartups[index];
-          return _buildStartupCard(startup);
+          return _buildStartupCard(_filteredStartups[index]);
         },
       ),
     );
@@ -90,20 +91,31 @@ class _ExplorePageState extends State<ExplorePage> {
             const CircleAvatar(
               radius: 28,
               backgroundColor: AppColors.background,
-              child: Icon(Icons.business_center, color: AppColors.primary, size: 30),
+              child: Icon(Icons.business_center,
+                  color: AppColors.primary, size: 30),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(startup['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                  Text(startup['name'] ?? '',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: AppColors.primary)),
                   const SizedBox(height: 4),
-                  Text(startup['stage'] ?? '', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                  Text(startup['stage'] ?? '',
+                      style:
+                          const TextStyle(fontSize: 14, color: Colors.grey)),
                 ],
               ),
             ),
-            Text(startup['val'] ?? '', style: const TextStyle(fontSize: 16, color: AppColors.accent, fontWeight: FontWeight.bold)),
+            Text(startup['val'] ?? '',
+                style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       ),

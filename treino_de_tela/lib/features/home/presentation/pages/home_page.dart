@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:treino_de_tela/theme/app_colors.dart';
+import 'package:treino_de_tela/core/theme/app_theme.dart';
 import 'package:treino_de_tela/services/firestore_service.dart';
 import 'package:treino_de_tela/services/backend_service.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -29,7 +30,8 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-        title: const Text('MesclaInvest', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text('MesclaInvest',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
@@ -40,7 +42,8 @@ class _HomePageState extends State<HomePage> {
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                Navigator.of(context)
+                    .pushNamedAndRemoveUntil('/login', (route) => false);
               }
             },
             tooltip: 'Sair da Conta',
@@ -75,27 +78,26 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         currentIndex: 0,
         onTap: (index) {
-          if (index == 1) {
-            Navigator.pushNamed(context, '/explore');
-          }
-          if (index == 2) {
-            Navigator.pushNamed(context, '/wallet');
-          }
-          if (index == 3) {
-            Navigator.pushNamed(context, '/p2p');
-          }
+          if (index == 1) Navigator.pushNamed(context, '/explore');
+          if (index == 2) Navigator.pushNamed(context, '/portfolio');
+          if (index == 3) Navigator.pushNamed(context, '/wallet');
+          if (index == 4) Navigator.pushNamed(context, '/p2p');
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explorar'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Carteira'),
-          BottomNavigationBarItem(icon: Icon(Icons.storefront), label: 'Mercado P2P'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.search), label: 'Explorar'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.pie_chart), label: 'Portfólio'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_balance_wallet), label: 'Carteira'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.storefront), label: 'Mercado P2P'),
         ],
       ),
     );
   }
 
-  // Cabeçalho com Saldo Simulado [cite: 169]
   Widget _buildHeaderWallet(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -114,26 +116,34 @@ class _HomePageState extends State<HomePage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Saldo', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
+              Text('Saldo',
+                  style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
               const SizedBox(height: 8),
               Text(balance,
-                  style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  _buildQuickAction(Icons.add_circle_outline, "Adicionar", onTap: () => _showAddFundsBottomSheet(context)),
+                  _buildQuickAction(Icons.add_circle_outline, "Adicionar",
+                      onTap: () => _showAddFundsBottomSheet(context)),
                   const SizedBox(width: 12),
-                  _buildQuickAction(Icons.swap_horiz, "Negociar", onTap: () => _showNegotiateBottomSheet(context)),
+                  _buildQuickAction(Icons.swap_horiz, "Negociar",
+                      onTap: () => _showNegotiateBottomSheet(context)),
                 ],
               ),
             ],
           );
-        }
+        },
       ),
     );
   }
 
-  Widget _buildQuickAction(IconData icon, String label, {VoidCallback? onTap}) {
+  Widget _buildQuickAction(IconData icon, String label,
+      {VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -146,7 +156,9 @@ class _HomePageState extends State<HomePage> {
           children: [
             Icon(icon, color: AppColors.accent, size: 20),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -156,12 +168,14 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Text(title, 
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+      child: Text(title,
+          style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary)),
     );
   }
 
-  // Card de Visualização de Valorização
   Widget _buildPortfolioChart() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -170,7 +184,10 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
+        ],
       ),
       child: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _assetsStream,
@@ -189,29 +206,39 @@ class _HomePageState extends State<HomePage> {
                 double totalCurrent = 0.0;
 
                 for (var asset in assets) {
-                  final investedValStr = asset['value']?.toString() ?? 'R\$ 0,00';
-                  final investedVal = FirestoreService().parseCurrency(investedValStr);
-                  
-                  final amountStr = asset['amount']?.toString().split(' ').first ?? '0';
-                  final currentQuotas = double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
-                  
+                  final investedValStr =
+                      asset['value']?.toString() ?? 'R\$ 0,00';
+                  final investedVal =
+                      FirestoreService().parseCurrency(investedValStr);
+
+                  final amountStr =
+                      asset['amount']?.toString().split(' ').first ?? '0';
+                  final currentQuotas =
+                      double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
+
                   if (currentQuotas > 0) {
                     totalInvested += investedVal;
-                    
+
                     final startupName = asset['name'];
-                    final startup = startups.firstWhere((s) => s['name'] == startupName, orElse: () => {});
-                    final currentPriceStr = startup['val']?.toString() ?? 'R\$ 0,00';
-                    final currentPrice = FirestoreService().parseCurrency(currentPriceStr);
-                    
+                    final startup = startups.firstWhere(
+                        (s) => s['name'] == startupName,
+                        orElse: () => {});
+                    final currentPriceStr =
+                        startup['val']?.toString() ?? 'R\$ 0,00';
+                    final currentPrice =
+                        FirestoreService().parseCurrency(currentPriceStr);
+
                     totalCurrent += (currentQuotas * currentPrice);
                   }
                 }
 
                 if (totalInvested > 0) {
-                  double appreciationPercent = ((totalCurrent / totalInvested) - 1) * 100;
-                  appreciationText = "${appreciationPercent >= 0 ? '+' : ''}${appreciationPercent.toStringAsFixed(2)}%";
+                  double appreciationPercent =
+                      ((totalCurrent / totalInvested) - 1) * 100;
+                  appreciationText =
+                      "${appreciationPercent >= 0 ? '+' : ''}${appreciationPercent.toStringAsFixed(2)}%";
                   appreciationText = appreciationText.replaceAll('.', ',');
-                  
+
                   if (appreciationPercent < 0) {
                     appreciationColor = Colors.redAccent;
                   }
@@ -225,27 +252,35 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Valorização Total', style: TextStyle(color: Colors.grey)),
-                        Text(appreciationText, style: TextStyle(color: appreciationColor, fontSize: 24, fontWeight: FontWeight.bold)),
-                        Text('Baseado nos ativos atuais', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                        const Text('Valorização Total',
+                            style: TextStyle(color: Colors.grey)),
+                        Text(appreciationText,
+                            style: TextStyle(
+                                color: appreciationColor,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold)),
+                        Text('Baseado nos ativos atuais',
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 12)),
                       ],
                     ),
                   ),
                   Icon(
-                    appreciationText.startsWith('-') ? Icons.trending_down : Icons.trending_up, 
-                    size: 80, 
-                    color: appreciationColor.withValues(alpha: 0.3)
+                    appreciationText.startsWith('-')
+                        ? Icons.trending_down
+                        : Icons.trending_up,
+                    size: 80,
+                    color: appreciationColor.withValues(alpha: 0.3),
                   ),
                 ],
               );
-            }
+            },
           );
-        }
+        },
       ),
     );
   }
 
-  // Catálogo Simulado de Startups [cite: 138, 140]
   Widget _buildStartupList() {
     return SizedBox(
       height: 180,
@@ -256,12 +291,13 @@ class _HomePageState extends State<HomePage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text("Erro ao carregar startups: ${snapshot.error}"));
+            return Center(
+                child:
+                    Text("Erro ao carregar startups: ${snapshot.error}"));
           }
-          
+
           final startups = snapshot.data ?? [];
           if (startups.isEmpty) {
-            // Se empty, vamos mostrar um botão p/ popular dados do firebase
             return Center(
               child: ElevatedButton(
                 onPressed: () => FirestoreService().seedInitialData(),
@@ -287,25 +323,33 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CircleAvatar(backgroundColor: AppColors.background, child: Icon(Icons.business_center)),
+                    const CircleAvatar(
+                        backgroundColor: AppColors.background,
+                        child: Icon(Icons.business_center)),
                     const Spacer(),
-                    Text(startups[index]['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(startups[index]['stage'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(startups[index]['name'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(startups[index]['stage'] ?? '',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 8),
-                    Text(startups[index]['val'] ?? '', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                    Text(startups[index]['val'] ?? '',
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
               );
             },
           );
-        }
+        },
       ),
     );
   }
 
   void _showAddFundsBottomSheet(BuildContext context) {
     final TextEditingController amountController = TextEditingController();
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -324,15 +368,21 @@ class _HomePageState extends State<HomePage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Adicionar Fundos", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              const Text("Adicionar Fundos",
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary)),
               const SizedBox(height: 16),
               TextField(
                 controller: amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: "Valor (R\$)",
                   prefixIcon: const Icon(Icons.attach_money),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -342,27 +392,39 @@ class _HomePageState extends State<HomePage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () async {
-                    final value = double.tryParse(amountController.text.replaceAll(',', '.'));
+                    final value = double.tryParse(
+                        amountController.text.replaceAll(',', '.'));
                     if (value != null && value > 0) {
                       try {
                         await BackendService().addFunds(value);
-                        if(context.mounted) {
+                        if (context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Fundos adicionados com sucesso!")));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text("Fundos adicionados com sucesso!")));
                         }
                       } catch (e) {
-                         if(context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Erro: $e")));
                         }
                       }
                     } else {
-                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Insira um valor válido")));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Insira um valor válido")));
                     }
                   },
-                  child: const Text("Confirmar", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: const Text("Confirmar",
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -398,27 +460,34 @@ class _HomePageState extends State<HomePage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Negociar Startups", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  const Text("Negociar Startups",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary)),
                   const SizedBox(height: 16),
-                  
-                  // Dropdown para Startups
                   StreamBuilder<List<Map<String, dynamic>>>(
                     stream: FirestoreService().getStartups(),
                     builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const CircularProgressIndicator();
+                      if (!snapshot.hasData) {
+                        return const CircularProgressIndicator();
+                      }
                       final startups = snapshot.data!;
-                      
+
                       return DropdownButtonFormField<String>(
                         decoration: InputDecoration(
                           labelText: 'Selecione a Startup',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                         initialValue: selectedStartupId,
                         items: startups.map((startup) {
-                          final id = startup['id']?.toString() ?? startup['name'] as String;
+                          final id = startup['id']?.toString() ??
+                              startup['name'] as String;
                           return DropdownMenuItem<String>(
                             value: id,
-                            child: Text("${startup['name']} (${startup['val']})"),
+                            child:
+                                Text("${startup['name']} (${startup['val']})"),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -426,62 +495,79 @@ class _HomePageState extends State<HomePage> {
                             selectedStartupId = value;
                             if (value != null) {
                               selectedStartupDetails = startups.firstWhere(
-                                (s) => (s['id']?.toString() ?? s['name']) == value,
+                                (s) =>
+                                    (s['id']?.toString() ?? s['name']) ==
+                                    value,
                               );
                             }
                           });
                         },
                       );
-                    }
+                    },
                   ),
-
                   const SizedBox(height: 16),
-                  
                   TextField(
                     controller: amountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: "Valor a investir (R\$)",
                       prefixIcon: const Icon(Icons.monetization_on),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () async {
-                        final value = double.tryParse(amountController.text.replaceAll(',', '.'));
-                        if (selectedStartupDetails != null && value != null && value > 0) {
+                        final value = double.tryParse(
+                            amountController.text.replaceAll(',', '.'));
+                        if (selectedStartupDetails != null &&
+                            value != null &&
+                            value > 0) {
                           try {
-                            await BackendService().negotiateAsset(selectedStartupDetails!, value);
-                            if(context.mounted) {
+                            await BackendService().negotiateAsset(
+                                selectedStartupDetails!, value);
+                            if (context.mounted) {
                               Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Investimento realizado com sucesso!")));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          "Investimento realizado com sucesso!")));
                             }
                           } catch (e) {
-                             if(context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: $e")));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Erro: $e")));
                             }
                           }
                         } else {
-                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Selecione uma startup e insira um valor válido")));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      "Selecione uma startup e insira um valor válido")));
                         }
                       },
-                      child: const Text("Confirmar Investimento", style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16)),
+                      child: const Text("Confirmar Investimento",
+                          style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
                     ),
                   ),
                   const SizedBox(height: 24),
                 ],
               ),
             );
-          }
+          },
         );
       },
     );

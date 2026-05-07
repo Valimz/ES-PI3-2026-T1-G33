@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:treino_de_tela/core/theme/app_theme.dart';
+import 'package:treino_de_tela/features/auth/presentation/pages/register_page.dart';
+import 'package:treino_de_tela/features/home/presentation/pages/home_page.dart';
 import 'package:treino_de_tela/services/firebase_auth_service.dart';
-import 'package:treino_de_tela/pages/home_page.dart';
-import 'package:treino_de_tela/pages/register_page.dart';
-import 'package:treino_de_tela/theme/app_colors.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,7 +29,6 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 60),
-                // Espaço para Logo ou Ícone da Marca
                 Center(
                   child: Container(
                     height: 80,
@@ -39,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Icon(
-                      Icons.trending_up_rounded, // Ícone que remete a investimentos
+                      Icons.trending_up_rounded,
                       color: AppColors.accent,
                       size: 40,
                     ),
@@ -113,7 +112,8 @@ class _LoginPageState extends State<LoginPage> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/esqueci-senha'),
                     child: const Text(
                       'Esqueceu a senha?',
                       style: TextStyle(
@@ -145,7 +145,9 @@ class _LoginPageState extends State<LoginPage> {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text(e.toString().replaceAll('Exception: ', ''))),
+                              content: Text(e
+                                  .toString()
+                                  .replaceAll('Exception: ', ''))),
                         );
                       }
                     }
@@ -166,7 +168,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                // Divisor "OU"
                 Row(
                   children: [
                     Expanded(
@@ -186,7 +187,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 24),
 
-                // Login com Biometria ou Redes Sociais
                 OutlinedButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.fingerprint),
@@ -208,8 +208,8 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Text(
                         "Novo por aqui? ",
-                        style:
-                            TextStyle(color: AppColors.textBody.withValues(alpha: 0.7)),
+                        style: TextStyle(
+                            color: AppColors.textBody.withValues(alpha: 0.7)),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -219,19 +219,20 @@ class _LoginPageState extends State<LoginPage> {
                                 builder: (context) => const RegisterPage()),
                           );
                         },
-                          child: const Text(
-                            "Criar Conta",
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        child: const Text(
+                          "Criar Conta",
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
-            ]),
+              ],
+            ),
           ),
         ),
       ),
@@ -252,4 +253,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

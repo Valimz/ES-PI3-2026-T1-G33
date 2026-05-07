@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:treino_de_tela/core/theme/app_theme.dart';
+import 'package:treino_de_tela/features/auth/presentation/pages/login_page.dart';
 import 'package:treino_de_tela/services/firebase_auth_service.dart';
-import 'package:treino_de_tela/pages/login_page.dart';
-import 'package:treino_de_tela/theme/app_colors.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -166,11 +166,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           MaterialPageRoute(
                               builder: (context) => const LoginPage()),
                         );
-                      } catch(e) {
+                      } catch (e) {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text(e.toString().replaceAll('Exception: ', ''))),
+                              content: Text(e
+                                  .toString()
+                                  .replaceAll('Exception: ', ''))),
                         );
                       }
                     }
@@ -199,9 +201,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             color: AppColors.textBody.withValues(alpha: 0.7)),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
+                        onTap: () => Navigator.pop(context),
                         child: const Text(
                           "Entrar",
                           style: TextStyle(
