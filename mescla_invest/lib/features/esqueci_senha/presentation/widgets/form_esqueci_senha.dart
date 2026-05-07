@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/esqueci_senha/presentation/widgets/sucesso_envio_dialog.dart';
 
 class FormEsqueciSenha extends StatefulWidget {
@@ -46,6 +47,20 @@ class _FormEsqueciSenhaState extends State<FormEsqueciSenha> {
     }
   }
 
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: AppColors.primary,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -53,18 +68,13 @@ class _FormEsqueciSenhaState extends State<FormEsqueciSenha> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Digite seu e-mail para recuperar senha',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
+          _buildFieldLabel("E-mail"),
           TextFormField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
-              labelText: 'E-mail',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
+              hintText: 'seu@email.com',
+              prefixIcon: Icon(Icons.email_outlined, size: 20),
             ),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -80,13 +90,47 @@ class _FormEsqueciSenhaState extends State<FormEsqueciSenha> {
           ElevatedButton(
             onPressed: _isLoading ? null : _submit,
             style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16)),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
             child: _isLoading
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Enviar Instruções'),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
+                : const Text(
+                    'Enviar Instruções',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Lembrou da senha? ",
+                  style: TextStyle(
+                      color: AppColors.textBody.withValues(alpha: 0.7)),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    "Fazer Login",
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
