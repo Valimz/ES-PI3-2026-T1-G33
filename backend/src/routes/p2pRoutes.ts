@@ -129,7 +129,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
       const sellerAssetsCollection = db.collection('users').doc(sellerId).collection('assets');
       const sellerAssetsQuery = await sellerAssetsCollection.where('name', '==', assetName).get();
       if (!sellerAssetsQuery.empty) {
-        const sDoc = sellerAssetsQuery.docs[0];
+        const sDoc = sellerAssetsQuery.docs[0]!;
         const sData = sDoc.data();
         const sQuotasStr = sData.amount?.toString().split(' ')[0] || '0';
         const sQuotas = parseFloat(sQuotasStr.replace(',', '.')) || 0.0;
@@ -151,7 +151,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
       const buyerAssetsCollection = db.collection('users').doc(buyerId).collection('assets');
       const buyerAssetsQuery = await buyerAssetsCollection.where('name', '==', assetName).get();
       if (!buyerAssetsQuery.empty) {
-        const bDoc = buyerAssetsQuery.docs[0];
+        const bDoc = buyerAssetsQuery.docs[0]!;
         const bData = bDoc.data();
         const bQuotasStr = bData.amount?.toString().split(' ')[0] || '0';
         const bQuotas = parseFloat(bQuotasStr.replace(',', '.')) || 0.0;
