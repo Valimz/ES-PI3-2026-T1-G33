@@ -39,49 +39,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAFOZURBmwtEihYIkV3RkM6Y7q7UEKJbr4',
-    appId: '1:582584576199:web:b5d238295e1639b66a76e2',
-    messagingSenderId: '582584576199',
-    projectId: 'bancopi3',
-    authDomain: 'bancopi3.firebaseapp.com',
-    storageBucket: 'bancopi3.firebasestorage.app',
-    measurementId: 'G-LZBN31SCMT',
+    apiKey: 'AIzaSyAY_pcQLgPuzkH-vlSAVYSLCJac6FsG6hg',
+    appId: '1:969947583204:web:34e6220cd02660cdb092f1',
+    messagingSenderId: '969947583204',
+    projectId: 'projetointegrador-13b6e',
+    authDomain: 'projetointegrador-13b6e.firebaseapp.com',
+    storageBucket: 'projetointegrador-13b6e.firebasestorage.app',
+    measurementId: 'G-GBNV77JBL1',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBbFseb2qoFIuz3PfghKTP-3B7pUNam9Sc',
-    appId: '1:582584576199:ios:a7c0e6ada5372d806a76e2',
-    messagingSenderId: '582584576199',
-    projectId: 'bancopi3',
-    storageBucket: 'bancopi3.firebasestorage.app',
+    apiKey: 'AIzaSyBu6HdYRqulJDwv09cpOFu0Yyel8O5YaFc',
+    appId: '1:969947583204:ios:f73ec6d10f51ee0ab092f1',
+    messagingSenderId: '969947583204',
+    projectId: 'projetointegrador-13b6e',
+    storageBucket: 'projetointegrador-13b6e.firebasestorage.app',
     iosBundleId: 'com.example.treinoDeTela',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBbFseb2qoFIuz3PfghKTP-3B7pUNam9Sc',
-    appId: '1:582584576199:ios:a7c0e6ada5372d806a76e2',
-    messagingSenderId: '582584576199',
-    projectId: 'bancopi3',
-    storageBucket: 'bancopi3.firebasestorage.app',
+    apiKey: 'AIzaSyBu6HdYRqulJDwv09cpOFu0Yyel8O5YaFc',
+    appId: '1:969947583204:ios:f73ec6d10f51ee0ab092f1',
+    messagingSenderId: '969947583204',
+    projectId: 'projetointegrador-13b6e',
+    storageBucket: 'projetointegrador-13b6e.firebasestorage.app',
     iosBundleId: 'com.example.treinoDeTela',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD0pAHA6shJd6WZONSqNgRN8NbtfSmxUb4',
-    appId: '1:582584576199:android:908ea23dc4dd4ff96a76e2',
-    messagingSenderId: '582584576199',
-    projectId: 'bancopi3',
-    storageBucket: 'bancopi3.firebasestorage.app',
+    apiKey: 'AIzaSyCVJV96pu6Ib4LUMRD6C4-yYcRv-n3mhhc',
+    appId: '1:969947583204:android:54bbb6db1224c39ab092f1',
+    messagingSenderId: '969947583204',
+    projectId: 'projetointegrador-13b6e',
+    storageBucket: 'projetointegrador-13b6e.firebasestorage.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAFOZURBmwtEihYIkV3RkM6Y7q7UEKJbr4',
-    appId: '1:582584576199:web:50f4fb0cbcfee6766a76e2',
-    messagingSenderId: '582584576199',
-    projectId: 'bancopi3',
-    authDomain: 'bancopi3.firebaseapp.com',
-    storageBucket: 'bancopi3.firebasestorage.app',
-    measurementId: 'G-GRMMZYWVR7',
+    apiKey: 'AIzaSyAY_pcQLgPuzkH-vlSAVYSLCJac6FsG6hg',
+    appId: '1:969947583204:web:d0ec463c83da05f3b092f1',
+    messagingSenderId: '969947583204',
+    projectId: 'projetointegrador-13b6e',
+    authDomain: 'projetointegrador-13b6e.firebaseapp.com',
+    storageBucket: 'projetointegrador-13b6e.firebasestorage.app',
+    measurementId: 'G-ZVTRCB6JB6',
   );
 
 }

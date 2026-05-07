@@ -1,0 +1,19 @@
+M	treino_de_tela/lib/main.dart
+D	treino_de_tela/lib/p2p_page.dart
+R092	treino_de_tela/lib/explore_page.dart	treino_de_tela/lib/pages/explore_page.dart
+R092	treino_de_tela/lib/home_page.dart	treino_de_tela/lib/pages/home_page.dart
+R098	treino_de_tela/lib/login_page.dart	treino_de_tela/lib/pages/login_page.dart
+R098	treino_de_tela/lib/register_page.dart	treino_de_tela/lib/pages/register_page.dart
+R098	treino_de_tela/lib/transaction_details_page.dart	treino_de_tela/lib/pages/transaction_details_page.dart
+R093	treino_de_tela/lib/wallet_page.dart	treino_de_tela/lib/pages/wallet_page.dart
+D	treino_de_tela/lib/services/backend_service.dart
+M	treino_de_tela/lib/services/firestore_service.dart
+A	treino_de_tela/lib/theme/app_colors.dart
+M	treino_de_tela/pubspec.lock
+M	treino_de_tela/pubspec.yaml
+A	treino_de_tela/refactor.py
+A	treino_de_tela/wireframes/explore_wireframe.png
+A	treino_de_tela/wireframes/home_wireframe.png
+A	treino_de_tela/wireframes/login_wireframe.png
+A	treino_de_tela/wireframes/register_wireframe.png
+A	treino_de_tela/wireframes/wallet_wireframe.png

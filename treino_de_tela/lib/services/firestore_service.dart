@@ -13,7 +13,7 @@ class FirestoreService {
           final data = doc.data();
           data['id'] = doc.id;
           return data;
-        }).toList());
+        }).toList()).asBroadcastStream();
   }
 
   // Stream para obter os dados da carteira do usuário logado
@@ -26,7 +26,7 @@ class FirestoreService {
         return snapshot.data();
       }
       return null;
-    });
+    }).asBroadcastStream();
   }
 
   // Stream para listar os ativos comprados pelo usuário
@@ -38,7 +38,7 @@ class FirestoreService {
           final data = doc.data();
           data['id'] = doc.id;
           return data;
-        }).toList());
+        }).toList()).asBroadcastStream();
   }
 
   // Stream para listar histórico de aquisições/transações
@@ -52,7 +52,7 @@ class FirestoreService {
           final data = doc.data();
           data['id'] = doc.id;
           return data;
-        }).toList());
+        }).toList()).asBroadcastStream();
   }
 
   // --- MÉTODOS DE NEGOCIAÇÃO E CARTEIRA ---
@@ -79,19 +79,24 @@ class FirestoreService {
     
     return _db.runTransaction((transaction) async {
       final walletDoc = await transaction.get(walletRef);
+      
       if (!walletDoc.exists) {
-        throw Exception("Carteira não encontrada");
+        // Criar carteira caso ela não exista
+        transaction.set(walletRef, {
+          'balance': _currencyFormat.format(amountToAdd),
+          'appreciation': '+ 0,0%',
+        });
+      } else {
+        final data = walletDoc.data()!;
+        final balanceStr = data['balance'] ?? 'R\$ 0,00';
+        final currentBalance = parseCurrency(balanceStr);
+        
+        final newBalance = currentBalance + amountToAdd;
+        
+        transaction.update(walletRef, {
+          'balance': _currencyFormat.format(newBalance),
+        });
       }
-
-      final data = walletDoc.data()!;
-      final balanceStr = data['balance'] ?? 'R\$ 0,00';
-      final currentBalance = parseCurrency(balanceStr);
-      
-      final newBalance = currentBalance + amountToAdd;
-      
-      transaction.update(walletRef, {
-        'balance': _currencyFormat.format(newBalance),
-      });
 
       // Salva o histórico de depósito
       final acquisitionRef = _db.collection('users').doc(user.uid).collection('acquisitions').doc();
@@ -228,6 +233,188 @@ class FirestoreService {
       });
     });
   }
+  // --- MÉTODOS P2P ---
+  Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final quotasStr = asset['amount']?.toString().split(' ').first ?? '0';
+    final quotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
+    if (quotas <= 0) throw Exception("Cotas insuficientes");
+
+    await _db.collection('p2p_offers').add({
+      'sellerId': user.uid,
+      'startupName': asset['name'],
+      'quotas': quotas,
+      'price': price,
+      'status': 'active',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getP2POffers() {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db.collection('p2p_offers')
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            })
+            // Opcional: filtrar no cliente se quiser esconder do próprio dono
+            .where((offer) => offer['sellerId'] != user.uid)
+            .toList()).asBroadcastStream();
+  }
+
+  Stream<List<Map<String, dynamic>>> getMyP2POffers() {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db.collection('p2p_offers')
+        .where('sellerId', isEqualTo: user.uid)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList()).asBroadcastStream();
+  }
+
+  Future<void> makeCounterOffer(String offerId, double proposedPrice) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    await _db.collection('p2p_offers').doc(offerId).collection('negotiations').doc(user.uid).set({
+      'buyerId': user.uid,
+      'proposedPrice': proposedPrice,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getOfferNegotiations(String offerId) {
+    return _db.collection('p2p_offers').doc(offerId).collection('negotiations')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList()).asBroadcastStream();
+  }
+
+  Future<void> acceptP2POffer(String offerId, {double? acceptedPrice, String? buyerIdParam}) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception("Usuário não logado");
+
+    final offerRef = _db.collection('p2p_offers').doc(offerId);
+
+    return _db.runTransaction((transaction) async {
+      final offerDoc = await transaction.get(offerRef);
+      if (!offerDoc.exists) throw Exception("Oferta não encontrada");
+
+      final offerData = offerDoc.data()!;
+      if (offerData['status'] != 'active') throw Exception("Esta oferta não está mais ativa.");
+
+      final sellerId = offerData['sellerId'];
+      final buyerId = buyerIdParam ?? currentUser.uid;
+
+      if (sellerId == buyerId) throw Exception("Você não pode comprar sua própria oferta.");
+
+      final price = acceptedPrice ?? offerData['price'] as double;
+      final assetName = offerData['startupName'] as String;
+      final quotas = offerData['quotas'] as double;
+
+      final buyerWalletRef = _db.collection('users').doc(buyerId).collection('wallet').doc('main');
+      final sellerWalletRef = _db.collection('users').doc(sellerId).collection('wallet').doc('main');
+      
+      final buyerWalletDoc = await transaction.get(buyerWalletRef);
+      final sellerWalletDoc = await transaction.get(sellerWalletRef);
+
+      if (!buyerWalletDoc.exists) throw Exception("Carteira do comprador não encontrada");
+      if (!sellerWalletDoc.exists) throw Exception("Carteira do vendedor não encontrada");
+
+      final buyerBalance = parseCurrency(buyerWalletDoc.data()!['balance'] ?? 'R\$ 0,00');
+      final sellerBalance = parseCurrency(sellerWalletDoc.data()!['balance'] ?? 'R\$ 0,00');
+
+      if (buyerBalance < price) throw Exception("Saldo insuficiente do comprador");
+
+      // Transferência de dinheiro
+      transaction.update(buyerWalletRef, {'balance': _currencyFormat.format(buyerBalance - price)});
+      transaction.update(sellerWalletRef, {'balance': _currencyFormat.format(sellerBalance + price)});
+
+      // Remover o ativo do vendedor
+      final sellerAssetsCollection = _db.collection('users').doc(sellerId).collection('assets');
+      final sellerAssetsQuery = await sellerAssetsCollection.where('name', isEqualTo: assetName).get();
+      if (sellerAssetsQuery.docs.isNotEmpty) {
+        // Assume selling all quotas for simplicity or update if partially selling 
+        // Our simplified model assumes the offer was for the whole asset or specific quotas
+        final sDoc = sellerAssetsQuery.docs.first;
+        final sData = sDoc.data();
+        final sQuotasStr = sData['amount']?.toString().split(' ').first ?? '0';
+        final sQuotas = double.tryParse(sQuotasStr.replaceAll(',', '.')) ?? 0.0;
+        
+        if (sQuotas <= quotas) { // Se vendeu tudo ou de alguma forma passou do total
+          transaction.delete(sDoc.reference);
+        } else {
+          // Atualiza descontando as cotas. Prefix seria " AD" etc.
+          String prefix = sData['amount']?.toString().split(' ').length == 2 ? " ${sData['amount']?.toString().split(' ').last}" : " Cotas";
+          // We need an approximate value deduction proportional to quotas
+          final sValStr = sData['value']?.toString() ?? 'R\$ 0,00';
+          final sVal = parseCurrency(sValStr);
+          final newVal = sVal - (sVal * (quotas/sQuotas));
+          transaction.update(sDoc.reference, {
+            'amount': "${(sQuotas - quotas).toStringAsFixed(1)}$prefix",
+            'value': _currencyFormat.format(newVal > 0 ? newVal : 0),
+          });
+        }
+      }
+
+      // Adicionar o ativo ao comprador
+      final buyerAssetsCollection = _db.collection('users').doc(buyerId).collection('assets');
+      final buyerAssetsQuery = await buyerAssetsCollection.where('name', isEqualTo: assetName).get();
+      if (buyerAssetsQuery.docs.isNotEmpty) {
+        final bDoc = buyerAssetsQuery.docs.first;
+        final bData = bDoc.data();
+        final bQuotasStr = bData['amount']?.toString().split(' ').first ?? '0';
+        final bQuotas = double.tryParse(bQuotasStr.replaceAll(',', '.')) ?? 0.0;
+        String prefix = bData['amount']?.toString().split(' ').length == 2 ? " ${bData['amount']?.toString().split(' ').last}" : " Cotas";
+        final bValStr = bData['value']?.toString() ?? 'R\$ 0,00';
+        final bVal = parseCurrency(bValStr);
+
+        transaction.update(bDoc.reference, {
+          'amount': "${(bQuotas + quotas).toStringAsFixed(1)}$prefix",
+          'value': _currencyFormat.format(bVal + price),
+        });
+      } else {
+         String prefix = " ${assetName.substring(0, 2).toUpperCase()}";
+         final newAssetRef = buyerAssetsCollection.doc();
+         transaction.set(newAssetRef, {
+           'name': assetName,
+           'value': _currencyFormat.format(price),
+           'amount': "${quotas.toStringAsFixed(1)}$prefix",
+         });
+      }
+
+      // Marcar oferta como concluída
+      transaction.update(offerRef, {'status': 'completed'});
+    });
+  }
+
+  Future<void> acceptCounterOffer(String offerId, String negotiationId, double agreedPrice) async {
+    // negotiationId é na verdade o buyerId pois usamos doc(user.uid)
+    await acceptP2POffer(offerId, acceptedPrice: agreedPrice, buyerIdParam: negotiationId);
+    
+    // Marcar negociação como aceita
+    await _db.collection('p2p_offers').doc(offerId).collection('negotiations').doc(negotiationId).update({
+      'status': 'accepted',
+    });
+  }
 
   // --- MÉTODOS DE SEED ---
   // Cria dados iniciais para testar o App conectando-se no BancoPI3
@@ -244,6 +431,10 @@ class FirestoreService {
         {"name": "FinSol", "stage": "Em operação", "val": "R\$ 28,75"},
         {"name": "Educa+", "stage": "Nova", "val": "R\$ 7,50"},
         {"name": "Mobility Z", "stage": "Em expansão", "val": "R\$ 98,00"},
+        {"name": "Aura IA", "stage": "Nova", "val": "R\$ 21,30"},
+        {"name": "CleanEnergy", "stage": "Semente", "val": "R\$ 2,50"},
+        {"name": "SpaceT", "stage": "Em operação", "val": "R\$ 150,00"},
+        {"name": "BioGenesis", "stage": "Em expansão", "val": "R\$ 55,20"},
       ];
       
       for (var startup in initialStartups) {

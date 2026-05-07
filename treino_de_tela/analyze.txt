@@ -1,0 +1,75 @@
+Analyzing treino_de_tela...                                     
+
+  error - Target of URI doesn't exist: 'package:treino_de_tela/explore_page.dart' - lib\main.dart:5:8 - uri_does_not_exist
+  error - Target of URI doesn't exist: 'package:treino_de_tela/home_page.dart' - lib\main.dart:6:8 - uri_does_not_exist
+  error - Target of URI doesn't exist: 'package:treino_de_tela/login_page.dart' - lib\main.dart:7:8 - uri_does_not_exist
+  error - Target of URI doesn't exist: 'package:treino_de_tela/register_page.dart' - lib\main.dart:8:8 - uri_does_not_exist
+  error - Target of URI doesn't exist: 'package:treino_de_tela/wallet_page.dart' - lib\main.dart:9:8 - uri_does_not_exist
+  error - The name 'LoginPage' isn't a class - lib\main.dart:57:38 - creation_with_non_type
+  error - The name 'RegisterPage' isn't a class - lib\main.dart:58:41 - creation_with_non_type
+  error - The name 'HomePage' isn't a class - lib\main.dart:59:37 - creation_with_non_type
+  error - The name 'ExplorePage' isn't a class - lib\main.dart:60:40 - creation_with_non_type
+  error - The name 'WalletPage' isn't a class - lib\main.dart:61:39 - creation_with_non_type
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:22:28 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:26:29 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:26:29 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:47:28 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:48:46 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:48:46 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:49:65 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:49:65 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:80:117 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:80:117 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:142:42 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:164:84 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:164:84 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:215:44 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:215:44 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:216:64 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:216:64 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:223:142 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:223:142 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:228:140 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:228:140 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:238:48 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:238:97 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:238:97 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:249:48 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:361:126 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:361:126 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:397:82 - undefined_identifier
+  error - Invalid constant value - lib\p2p_page.dart:398:86 - invalid_constant
+  error - Undefined name 'AppColors' - lib\p2p_page.dart:398:86 - undefined_identifier
+  error - Target of URI doesn't exist: 'main.dart' - lib\pages\home_page.dart:3:8 - uri_does_not_exist
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:30:26 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:50:30 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:50:30 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:52:56 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:52:56 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:74:28 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:103:16 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:103:16 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:147:31 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:160:82 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:160:82 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:182:41 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:290:57 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:290:57 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:295:86 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:295:86 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:327:113 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:327:113 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:343:38 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:365:74 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:365:74 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:401:118 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:401:118 - undefined_identifier
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:455:42 - undefined_identifier
+  error - Invalid constant value - lib\pages\home_page.dart:477:91 - invalid_constant
+  error - Undefined name 'AppColors' - lib\pages\home_page.dart:477:91 - undefined_identifier
+   info - The prefix 'IO' isn't a lower_case_with_underscores identifier - lib\services\backend_service.dart:4:60 - library_prefixes
+   info - Don't invoke 'print' in production code - lib\services\backend_service.dart:36:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\backend_service.dart:56:34 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\firestore_service.dart:453:9 - avoid_print
+
+71 issues found. (ran in 5.0s)
