@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 
-// Exibe o valor atual e a variação percentual da cotação.
+// Exibe o valor atual e a variação percentual da valorização do token.
 class ResumoValorizacaoCard extends StatelessWidget {
   const ResumoValorizacaoCard({
     super.key,
@@ -40,7 +40,7 @@ class ResumoValorizacaoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Cotação Atual',
+            'Valor atual do token',
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 6),

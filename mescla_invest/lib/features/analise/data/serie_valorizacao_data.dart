@@ -2,8 +2,9 @@
 // RA: 25003353
 
 import 'package:mescla_invest/features/analise/models/periodo_analise.dart';
+import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 
-// Repositório local temporário com séries históricas simuladas.
+// Repositório local temporário com séries históricas simuladas do token Mescla.
 class SerieValorizacaoData {
   const SerieValorizacaoData._();
 
@@ -15,8 +16,28 @@ class SerieValorizacaoData {
     PeriodoAnalise.ano: [4.49, 4.58, 4.61, 4.70, 4.81, 4.94, 5.03, 5.19],
   };
 
-  // Retorna a série do período selecionado de forma imutável.
-  static List<double> pontosPorPeriodo(PeriodoAnalise periodo) {
-    return List<double>.unmodifiable(_series[periodo]!);
+  // Retorna a série do período selecionado ajustada à startup escolhida.
+  static List<double> pontosPorPeriodo({
+    required PeriodoAnalise periodo,
+    required InvestimentoModel startup,
+  }) {
+    final base = _series[periodo]!;
+    final valorInicial = startup.posicao.precoMedio;
+    final valorFinal = startup.posicao.valorAtual;
+    final baseInicial = base.first;
+    final baseFinal = base.last;
+    final variacaoBase = baseFinal - baseInicial;
+
+    // Usa a forma da série base, mas adapta a amplitude para a startup selecionada.
+    final pontos = base.map((ponto) {
+      if (variacaoBase == 0) {
+        return valorInicial;
+      }
+
+      final progresso = (ponto - baseInicial) / variacaoBase;
+      return valorInicial + ((valorFinal - valorInicial) * progresso);
+    }).toList();
+
+    return List<double>.unmodifiable(pontos);
   }
 }
