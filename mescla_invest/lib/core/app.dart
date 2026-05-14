@@ -11,6 +11,7 @@ import 'package:mescla_invest/features/p2p/presentation/pages/p2p_page.dart';
 import 'package:mescla_invest/features/analise/presentation/pages/analise_graficos_page.dart';
 import 'package:mescla_invest/features/portfolio/presentation/pages/portfolio_page.dart';
 import 'package:mescla_invest/features/wallet/presentation/pages/wallet_page.dart';
+import 'package:mescla_invest/features/notifications/presentation/pages/notifications_page.dart';
 
 class InvestApp extends StatelessWidget {
   const InvestApp({super.key});
@@ -46,6 +47,7 @@ class InvestApp extends StatelessWidget {
         '/esqueci-senha': (context) => const EsqueciSenhaPage(),
         '/mfa': (context) => const MfaPage(),
         '/analise': (context) => const AnaliseGraficosPage(),
+        '/notifications': (context) => const NotificationsPage(),
       },
     );
   }

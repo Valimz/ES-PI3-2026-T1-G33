@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/features/explore/presentation/widgets/startup_details_dialog.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -80,43 +81,46 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _buildStartupCard(Map<String, String> startup) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.background,
-              child: Icon(Icons.business_center,
-                  color: AppColors.primary, size: 30),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(startup['name'] ?? '',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: AppColors.primary)),
-                  const SizedBox(height: 4),
-                  Text(startup['stage'] ?? '',
-                      style:
-                          const TextStyle(fontSize: 14, color: Colors.grey)),
-                ],
+    return GestureDetector(
+      onTap: () => showStartupDetailsDialog(context, startup),
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.only(bottom: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.background,
+                child: Icon(Icons.business_center,
+                    color: AppColors.primary, size: 30),
               ),
-            ),
-            Text(startup['val'] ?? '',
-                style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.accent,
-                    fontWeight: FontWeight.bold)),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(startup['name'] ?? '',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppColors.primary)),
+                    const SizedBox(height: 4),
+                    Text(startup['stage'] ?? '',
+                        style:
+                            const TextStyle(fontSize: 14, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              Text(startup['val'] ?? '',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.bold)),
+            ],
+          ),
         ),
       ),
     );

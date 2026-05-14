@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/features/explore/presentation/widgets/startup_details_dialog.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 import 'package:mescla_invest/services/backend_service.dart';
+import 'package:mescla_invest/services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,9 +35,25 @@ class _HomePageState extends State<HomePage> {
         title: const Text('MesclaInvest',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
+          StreamBuilder<int>(
+            stream: NotificationService().getUnreadCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return IconButton(
+                icon: Badge(
+                  isLabelVisible: count > 0,
+                  label: Text(
+                    count > 99 ? '99+' : count.toString(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: const Color(0xFFDC2626),
+                  child: const Icon(Icons.notifications_none, color: Colors.white),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/notifications');
+                },
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -311,33 +329,37 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.only(left: 24),
             itemCount: startups.length,
             itemBuilder: (context, index) {
-              return Container(
-                width: 160,
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const CircleAvatar(
-                        backgroundColor: AppColors.background,
-                        child: Icon(Icons.business_center)),
-                    const Spacer(),
-                    Text(startups[index]['name'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(startups[index]['stage'] ?? '',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    Text(startups[index]['val'] ?? '',
-                        style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold)),
-                  ],
+              final startup = startups[index];
+              return GestureDetector(
+                onTap: () => showStartupDetailsDialog(context, startup),
+                child: Container(
+                  width: 160,
+                  margin: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                          backgroundColor: AppColors.background,
+                          child: Icon(Icons.business_center)),
+                      const Spacer(),
+                      Text(startup['name'] ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(startup['stage'] ?? '',
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      Text(startup['val'] ?? '',
+                          style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               );
             },
