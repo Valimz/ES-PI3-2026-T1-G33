@@ -20,10 +20,10 @@ class _WalletPageState extends State<WalletPage> {
   @override
   void initState() {
     super.initState();
-    BackendService().connectSocket();
-    _walletStream = BackendService().getWalletData();
-    _assetsStream = BackendService().getUserAssets();
-    _acquisitionsStream = FirestoreService().getUserAcquisitions();
+    // Use Firestore directly — avoids requiring socket connection just to read
+    _walletStream = FirestoreService().getWalletData();
+    _assetsStream = FirestoreService().getUserAssets();
+    _acquisitionsStream = FirestoreService().getUserAcquisitions(limit: 50);
   }
 
   @override

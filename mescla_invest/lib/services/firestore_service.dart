@@ -42,13 +42,22 @@ class FirestoreService {
   }
 
   // Stream para listar histórico de aquisições/transações
-  Stream<List<Map<String, dynamic>>> getUserAcquisitions() {
+  /// [limit] restringe a quantidade de documentos retornados (melhora performance).
+  Stream<List<Map<String, dynamic>>> getUserAcquisitions({int? limit}) {
     final user = _auth.currentUser;
     if (user == null) return const Stream.empty();
 
-    return _db.collection('users').doc(user.uid).collection('acquisitions')
-        .orderBy('date', descending: true)
-        .snapshots().map((snapshot) => snapshot.docs.map((doc) {
+    Query<Map<String, dynamic>> query = _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('acquisitions')
+        .orderBy('date', descending: true);
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
           final data = doc.data();
           data['id'] = doc.id;
           return data;

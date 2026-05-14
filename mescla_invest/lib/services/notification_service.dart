@@ -24,7 +24,7 @@ class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  final String _baseUrl = 'http://10.0.2.2:3000'; // Emulador Android
+  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
 
   bool _initialized = false;
 

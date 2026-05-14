@@ -9,7 +9,7 @@ class BackendService {
   factory BackendService() => _instance;
 
   IO.Socket? _socket;
-  final String _baseUrl = 'http://10.0.2.2:3000'; // Emulador Android
+  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
 
   // Controladores de Stream locais para repassar os eventos do Socket
   final _walletStreamController = StreamController<Map<String, dynamic>?>.broadcast();
