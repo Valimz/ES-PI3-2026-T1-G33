@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/explore/presentation/widgets/startup_details_dialog.dart';
+import 'package:mescla_invest/features/portfolio/presentation/widgets/filtro_ativos_widget.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -15,6 +16,7 @@ class _ExplorePageState extends State<ExplorePage> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, String>> _allStartups = [];
   List<Map<String, String>> _filteredStartups = [];
+  FiltroStartup _filtroSelecionado = FiltroStartup.todos;
   late final StreamSubscription<List<Map<String, dynamic>>> _startupsSubscription;
 
   @override
@@ -39,11 +41,28 @@ class _ExplorePageState extends State<ExplorePage> {
     super.dispose();
   }
 
+  bool _matchesFiltro(Map<String, String> startup, FiltroStartup filtro) {
+    if (filtro == FiltroStartup.todos) return true;
+    final stage = (startup['stage'] ?? '').toLowerCase();
+    switch (filtro) {
+      case FiltroStartup.emExpansao:
+        return stage.contains('expans');
+      case FiltroStartup.emOperacao:
+        return stage.contains('opera');
+      case FiltroStartup.nova:
+        return !stage.contains('expans') && !stage.contains('opera');
+      case FiltroStartup.todos:
+        return true;
+    }
+  }
+
   void _filterStartups() {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredStartups = _allStartups.where((startup) {
-        return (startup['name'] ?? '').toLowerCase().contains(query);
+        final matchesQuery =
+            (startup['name'] ?? '').toLowerCase().contains(query);
+        return matchesQuery && _matchesFiltro(startup, _filtroSelecionado);
       }).toList();
     });
   }
@@ -70,12 +89,42 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _filteredStartups.length,
-        itemBuilder: (context, index) {
-          return _buildStartupCard(_filteredStartups[index]);
-        },
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'Filtrar por estágio',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FiltroAtivosWidget(
+              selecionado: _filtroSelecionado,
+              onSelecionar: (filtro) {
+                setState(() => _filtroSelecionado = filtro);
+                _filterStartups();
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _filteredStartups.isEmpty
+                ? const Center(
+                    child: Text(
+                        'Nenhuma startup encontrada para o filtro selecionado.'),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredStartups.length,
+                    itemBuilder: (context, index) {
+                      return _buildStartupCard(_filteredStartups[index]);
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
