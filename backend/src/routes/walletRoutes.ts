@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { db, auth } from '../firebaseAdmin';
+import { sendNotification } from './notificationRoutes';
 
 const router = Router();
 
@@ -74,6 +75,14 @@ router.post('/addFunds', requireAuth, async (req: Request, res: Response) => {
       });
     });
 
+    // Enviar notificação
+    await sendNotification(user.uid, {
+      title: 'Depósito realizado',
+      body: `Você adicionou ${formatCurrency(amount)} à sua carteira.`,
+      type: 'deposit',
+      data: { amount: amount.toString() },
+    });
+
     res.status(200).json({ message: 'Funds added successfully' });
   } catch (error: any) {
     console.error(error);
@@ -95,6 +104,10 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
     const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
     const assetsCollection = db.collection('users').doc(user.uid).collection('assets');
     
+    // Query FORA da transaction para encontrar o doc ref do ativo existente
+    const existingAssetQuery = await assetsCollection.where('name', '==', startup.name).limit(1).get();
+    const existingAssetRef = existingAssetQuery.empty ? null : existingAssetQuery.docs[0]!.ref;
+
     await db.runTransaction(async (transaction) => {
       const walletDoc = await transaction.get(walletRef);
       if (!walletDoc.exists) throw new Error("Carteira não encontrada");
@@ -112,18 +125,14 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
         balance: formatCurrency(newBalance)
       });
 
-      // Checar se o ativo já existe
-      const querySnapshot = await assetsCollection.where('name', '==', startup.name).get();
-      
       const startupPrice = parseCurrency(startup.val || 'R$ 1,00');
       const quotasToBuy = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
       const prefix = ` ${startup.name.substring(0, 2).toUpperCase()}`;
 
-      if (!querySnapshot.empty) {
-        // Atualiza ativo existente
-        const assetDoc = querySnapshot.docs[0];
-        const assetRef = assetDoc.reference;
-        const assetData = assetDoc.data();
+      if (existingAssetRef) {
+        // Re-lê o ativo dentro da transaction para consistência
+        const assetDoc = await transaction.get(existingAssetRef);
+        const assetData = assetDoc.data()!;
         
         const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');
         const quotasStr = assetData.amount?.toString().split(' ')[0] || '0';
@@ -132,7 +141,7 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
         const newQuotas = currentQuotas + quotasToBuy;
         const existingPrefix = assetData.amount?.toString().split(' ').length === 2 ? ` ${assetData.amount.toString().split(' ')[1]}` : ' Cotas';
 
-        transaction.update(assetRef, {
+        transaction.update(existingAssetRef, {
           value: formatCurrency(currentAssetValue + amountToBuy),
           amount: `${newQuotas.toFixed(1).replace('.', ',')}${existingPrefix}`
         });
@@ -155,6 +164,14 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
         quotas: `${quotasToBuy.toFixed(1).replace('.', ',')}${prefix}`,
         date: new Date()
       });
+    });
+
+    // Enviar notificação
+    await sendNotification(user.uid, {
+      title: 'Compra realizada',
+      body: `Você investiu ${formatCurrency(amountToBuy)} em ${startup.name}.`,
+      type: 'buy',
+      data: { startupName: startup.name, amount: amountToBuy.toString() },
     });
 
     res.status(200).json({ message: 'Asset purchased successfully' });
@@ -210,6 +227,14 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
         quotas: quotasStr,
         date: new Date()
       });
+    });
+
+    // Enviar notificação
+    await sendNotification(user.uid, {
+      title: 'Venda realizada',
+      body: `Você vendeu seus ativos de ${asset.name || 'startup'}.`,
+      type: 'sell',
+      data: { assetId: asset.id },
     });
 
     res.status(200).json({ message: 'Asset sold successfully' });

@@ -1,12 +1,5 @@
-// Nome: Felipe Augusto dos Santos Silva
-// RA: 25003353
-
-// Nome: Felipe Augusto dos Santos Silva
-// RA: 25003353
-
 import 'package:flutter/material.dart';
 
-// Exibe o valor total da carteira e a variação consolidada.
 class ResumoPortfolioHeader extends StatelessWidget {
   const ResumoPortfolioHeader({
     super.key,
@@ -21,11 +14,9 @@ class ResumoPortfolioHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Define a cor do destaque de acordo com o resultado consolidado da carteira.
     final isPositiva = variacaoEmReais >= 0;
-    final corVariacao = isPositiva
-        ? const Color(0xFF166534)
-        : const Color(0xFF991B1B);
+    final corVariacao =
+        isPositiva ? const Color(0xFF166534) : const Color(0xFF991B1B);
     final sinal = isPositiva ? '+' : '';
 
     return Container(
@@ -42,22 +33,20 @@ class ResumoPortfolioHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Carteira total',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
+          const Text('Carteira total',
+              style: TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 8),
           Text(
             _formatarMoeda(valorTotal),
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
-            ),
+                color: Colors.white,
+                fontSize: 34,
+                fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(28),
@@ -65,7 +54,8 @@ class ResumoPortfolioHeader extends StatelessWidget {
             child: Text(
               '$sinal${_formatarMoeda(variacaoEmReais)} '
               '($sinal${variacaoPercentual.toStringAsFixed(2)}%)',
-              style: TextStyle(color: corVariacao, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                  color: corVariacao, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -74,8 +64,8 @@ class ResumoPortfolioHeader extends StatelessWidget {
   }
 
   String _formatarMoeda(double valor) {
-    // Formata com padrão brasileiro sem depender de pacote extra.
-    final valorAbsoluto = valor.abs().toStringAsFixed(2).replaceAll('.', ',');
+    final valorAbsoluto =
+        valor.abs().toStringAsFixed(2).replaceAll('.', ',');
     return 'R\$ $valorAbsoluto';
   }
 }

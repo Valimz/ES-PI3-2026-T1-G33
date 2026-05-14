@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { db, auth } from '../firebaseAdmin';
 import { parseCurrency, formatCurrency } from './walletRoutes';
+import { sendNotification } from './notificationRoutes';
 
 const router = Router();
 
@@ -46,6 +47,14 @@ router.post('/createOffer', requireAuth, async (req: Request, res: Response) => 
       createdAt: new Date()
     });
 
+    // Notificar o vendedor que sua oferta foi criada
+    await sendNotification(user.uid, {
+      title: 'Oferta P2P criada',
+      body: `Sua oferta de ${asset.name} por ${formatCurrency(price)} está ativa no mercado.`,
+      type: 'p2p_offer',
+      data: { startupName: asset.name, price: price.toString() },
+    });
+
     res.status(200).json({ message: 'Offer created successfully' });
   } catch (error: any) {
     console.error(error);
@@ -71,6 +80,18 @@ router.post('/makeCounterOffer', requireAuth, async (req: Request, res: Response
       createdAt: new Date()
     });
 
+    // Notificar o vendedor sobre a contraproposta
+    const offerDoc = await db.collection('p2p_offers').doc(offerId).get();
+    if (offerDoc.exists) {
+      const offerData = offerDoc.data()!;
+      await sendNotification(offerData.sellerId, {
+        title: 'Nova contraproposta',
+        body: `Recebeu uma contraproposta de ${formatCurrency(proposedPrice)} para ${offerData.startupName}.`,
+        type: 'p2p_counter',
+        data: { offerId, proposedPrice: proposedPrice.toString() },
+      });
+    }
+
     res.status(200).json({ message: 'Counter offer made successfully' });
   } catch (error: any) {
     console.error(error);
@@ -91,6 +112,26 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
 
     const offerRef = db.collection('p2p_offers').doc(offerId);
 
+    // Ler a oferta antes para obter sellerId/buyerId e poder fazer as queries de assets fora da transaction
+    const preOfferDoc = await offerRef.get();
+    if (!preOfferDoc.exists) {
+      res.status(404).json({ error: 'Oferta não encontrada' });
+      return;
+    }
+    const preOfferData = preOfferDoc.data()!;
+    const sellerId = preOfferData.sellerId;
+    const buyerId = buyerIdParam || user.uid;
+    const assetName = preOfferData.startupName;
+
+    // Queries de assets FORA da transaction para pegar os doc refs
+    const sellerAssetsCollection = db.collection('users').doc(sellerId).collection('assets');
+    const sellerAssetsQuery = await sellerAssetsCollection.where('name', '==', assetName).limit(1).get();
+    const sellerAssetRef = sellerAssetsQuery.empty ? null : sellerAssetsQuery.docs[0]!.ref;
+
+    const buyerAssetsCollection = db.collection('users').doc(buyerId).collection('assets');
+    const buyerAssetsQuery = await buyerAssetsCollection.where('name', '==', assetName).limit(1).get();
+    const buyerAssetRef = buyerAssetsQuery.empty ? null : buyerAssetsQuery.docs[0]!.ref;
+
     await db.runTransaction(async (transaction) => {
       const offerDoc = await transaction.get(offerRef);
       if (!offerDoc.exists) throw new Error("Oferta não encontrada");
@@ -98,13 +139,9 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
       const offerData = offerDoc.data()!;
       if (offerData.status !== 'active') throw new Error("Esta oferta não está mais ativa.");
 
-      const sellerId = offerData.sellerId;
-      const buyerId = buyerIdParam || user.uid;
-
       if (sellerId === buyerId) throw new Error("Você não pode comprar sua própria oferta.");
 
       const price = acceptedPrice || offerData.price;
-      const assetName = offerData.startupName;
       const quotas = offerData.quotas;
 
       const buyerWalletRef = db.collection('users').doc(buyerId).collection('wallet').doc('main');
@@ -125,43 +162,43 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
       transaction.update(buyerWalletRef, { balance: formatCurrency(buyerBalance - price) });
       transaction.update(sellerWalletRef, { balance: formatCurrency(sellerBalance + price) });
 
-      // Remover o ativo do vendedor
-      const sellerAssetsCollection = db.collection('users').doc(sellerId).collection('assets');
-      const sellerAssetsQuery = await sellerAssetsCollection.where('name', '==', assetName).get();
-      if (!sellerAssetsQuery.empty) {
-        const sDoc = sellerAssetsQuery.docs[0];
-        const sData = sDoc.data();
-        const sQuotasStr = sData.amount?.toString().split(' ')[0] || '0';
-        const sQuotas = parseFloat(sQuotasStr.replace(',', '.')) || 0.0;
-        
-        if (sQuotas <= quotas) { 
-          transaction.delete(sDoc.reference);
-        } else {
-          const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Cotas';
-          const sVal = parseCurrency(sData.value?.toString() || 'R$ 0,00');
-          const newVal = sVal - (sVal * (quotas/sQuotas));
-          transaction.update(sDoc.reference, {
-            amount: `${(sQuotas - quotas).toFixed(1).replace('.', ',')}${prefix}`,
-            value: formatCurrency(newVal > 0 ? newVal : 0)
-          });
+      // Remover/atualizar o ativo do vendedor
+      if (sellerAssetRef) {
+        const sDoc = await transaction.get(sellerAssetRef);
+        if (sDoc.exists) {
+          const sData = sDoc.data()!;
+          const sQuotasStr = sData.amount?.toString().split(' ')[0] || '0';
+          const sQuotas = parseFloat(sQuotasStr.replace(',', '.')) || 0.0;
+          
+          if (sQuotas <= quotas) { 
+            transaction.delete(sellerAssetRef);
+          } else {
+            const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Cotas';
+            const sVal = parseCurrency(sData.value?.toString() || 'R$ 0,00');
+            const newVal = sVal - (sVal * (quotas/sQuotas));
+            transaction.update(sellerAssetRef, {
+              amount: `${(sQuotas - quotas).toFixed(1).replace('.', ',')}${prefix}`,
+              value: formatCurrency(newVal > 0 ? newVal : 0)
+            });
+          }
         }
       }
 
-      // Adicionar o ativo ao comprador
-      const buyerAssetsCollection = db.collection('users').doc(buyerId).collection('assets');
-      const buyerAssetsQuery = await buyerAssetsCollection.where('name', '==', assetName).get();
-      if (!buyerAssetsQuery.empty) {
-        const bDoc = buyerAssetsQuery.docs[0];
-        const bData = bDoc.data();
-        const bQuotasStr = bData.amount?.toString().split(' ')[0] || '0';
-        const bQuotas = parseFloat(bQuotasStr.replace(',', '.')) || 0.0;
-        const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Cotas';
-        const bVal = parseCurrency(bData.value?.toString() || 'R$ 0,00');
+      // Adicionar/atualizar o ativo do comprador
+      if (buyerAssetRef) {
+        const bDoc = await transaction.get(buyerAssetRef);
+        if (bDoc.exists) {
+          const bData = bDoc.data()!;
+          const bQuotasStr = bData.amount?.toString().split(' ')[0] || '0';
+          const bQuotas = parseFloat(bQuotasStr.replace(',', '.')) || 0.0;
+          const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Cotas';
+          const bVal = parseCurrency(bData.value?.toString() || 'R$ 0,00');
 
-        transaction.update(bDoc.reference, {
-          amount: `${(bQuotas + quotas).toFixed(1).replace('.', ',')}${prefix}`,
-          value: formatCurrency(bVal + price)
-        });
+          transaction.update(buyerAssetRef, {
+            amount: `${(bQuotas + quotas).toFixed(1).replace('.', ',')}${prefix}`,
+            value: formatCurrency(bVal + price)
+          });
+        }
       } else {
          const prefix = ` ${assetName.substring(0, 2).toUpperCase()}`;
          const newAssetRef = buyerAssetsCollection.doc();
@@ -181,6 +218,28 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
         transaction.update(negRef, { status: 'accepted' });
       }
     });
+
+    const finalPrice = acceptedPrice || preOfferData.price || 0;
+
+    // Notificar vendedor
+    if (sellerId) {
+      await sendNotification(sellerId, {
+        title: 'Oferta P2P concluída',
+        body: `Sua oferta de ${assetName} foi aceita por ${formatCurrency(finalPrice)}.`,
+        type: 'p2p_accepted',
+        data: { offerId, startupName: assetName },
+      });
+    }
+
+    // Notificar comprador
+    if (buyerId && buyerId !== sellerId) {
+      await sendNotification(buyerId, {
+        title: 'Compra P2P realizada',
+        body: `Você adquiriu ${assetName} por ${formatCurrency(finalPrice)} no mercado P2P.`,
+        type: 'p2p_accepted',
+        data: { offerId, startupName: assetName },
+      });
+    }
 
     res.status(200).json({ message: 'Offer accepted successfully' });
   } catch (error: any) {
