@@ -56,6 +56,11 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.flag, color: Colors.white),
+            onPressed: () => Navigator.pushNamed(context, '/milestones'),
+            tooltip: 'Marcos',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
