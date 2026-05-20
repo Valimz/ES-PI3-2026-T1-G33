@@ -46,20 +46,7 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
 
     return Scaffold(
       appBar: AppBar(
-<<<<<<< HEAD
-        title: const Text('Análise do Token'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.flag),
-            tooltip: 'Marcos',
-            onPressed: () => Navigator.pushNamed(context, '/milestones'),
-          ),
-        ],
-      ),
-=======
           title: const Text('Análise do Token'), centerTitle: true),
->>>>>>> 51f660bea61144c236b3188220058623356a0ddd
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

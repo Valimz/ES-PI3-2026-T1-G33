@@ -88,6 +88,13 @@ class _ExplorePageState extends State<ExplorePage> {
             ),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag, color: AppColors.primary),
+            tooltip: 'Marcos',
+            onPressed: () => Navigator.pushNamed(context, '/milestones'),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
