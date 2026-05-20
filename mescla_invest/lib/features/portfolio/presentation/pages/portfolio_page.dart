@@ -31,6 +31,13 @@ class _PortfolioPageState extends State<PortfolioPage> {
       appBar: AppBar(
         title: const Text('Meus Investimentos'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag),
+            tooltip: 'Marcos',
+            onPressed: () => Navigator.pushNamed(context, '/milestones'),
+          ),
+        ],
       ),
       body: SafeArea(
         child: StreamBuilder<List<Map<String, dynamic>>>(
