@@ -30,6 +30,9 @@ class InvestApp extends StatelessWidget {
               body: Center(child: CircularProgressIndicator()),
             );
           }
+          // Com Firebase Auth TOTP nativo, se o usuário está logado
+          // (authStateChanges emite), significa que o MFA já foi verificado.
+          // O Firebase só completa o sign-in após a verificação TOTP.
           if (snapshot.hasData && snapshot.data != null) {
             return const HomePage();
           }

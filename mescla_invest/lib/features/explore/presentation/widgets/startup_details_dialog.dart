@@ -1,43 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/services/backend_service.dart';
+import 'package:mescla_invest/features/explore/presentation/pages/startup_questions_page.dart' as mescla_startup_questions;
 
 /// Exibe um pop-up com detalhes de uma startup.
 /// [startup] deve conter pelo menos as chaves: name, stage, val.
 void showStartupDetailsDialog(
     BuildContext context, Map<String, dynamic> startup) {
-  final name = startup['name']?.toString() ?? 'Startup';
-  final stage = startup['stage']?.toString() ?? '—';
-  final val = startup['val']?.toString() ?? 'R\$ 0,00';
-
-  // Gera duas letras para o avatar baseado no nome
-  final initials =
-      name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
-
-  // Cor do badge de estágio
-  Color stageBadgeColor;
-  switch (stage.toLowerCase()) {
-    case 'nova':
-    case 'semente':
-      stageBadgeColor = AppColors.teal;
-      break;
-    case 'em operação':
-      stageBadgeColor = AppColors.positive;
-      break;
-    case 'em expansão':
-      stageBadgeColor = const Color(0xFFD97706);
-      break;
-    default:
-      stageBadgeColor = Colors.grey;
-  }
-
   showDialog(
     context: context,
     builder: (context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
+      return _StartupDetailsDialog(startup: startup);
+    },
+  );
+}
+
+class _StartupDetailsDialog extends StatefulWidget {
+  final Map<String, dynamic> startup;
+
+  const _StartupDetailsDialog({required this.startup});
+
+  @override
+  State<_StartupDetailsDialog> createState() => _StartupDetailsDialogState();
+}
+
+class _StartupDetailsDialogState extends State<_StartupDetailsDialog> {
+  bool _showInvestForm = false;
+  bool _isLoading = false;
+  final TextEditingController _amountController = TextEditingController();
+
+  late final String name;
+  late final String stage;
+  late final String val;
+  late final String initials;
+  late final Color stageBadgeColor;
+
+  @override
+  void initState() {
+    super.initState();
+    name = widget.startup['name']?.toString() ?? 'Startup';
+    stage = widget.startup['stage']?.toString() ?? '—';
+    val = widget.startup['val']?.toString() ?? 'R\$ 0,00';
+
+    initials = name.length >= 2
+        ? name.substring(0, 2).toUpperCase()
+        : name.toUpperCase();
+
+    switch (stage.toLowerCase()) {
+      case 'nova':
+      case 'semente':
+        stageBadgeColor = AppColors.teal;
+        break;
+      case 'em operação':
+        stageBadgeColor = AppColors.positive;
+        break;
+      case 'em expansão':
+        stageBadgeColor = const Color(0xFFD97706);
+        break;
+      default:
+        stageBadgeColor = Colors.grey;
+    }
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleInvest() async {
+    final value =
+        double.tryParse(_amountController.text.replaceAll(',', '.'));
+    if (value == null || value <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insira um valor válido')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await BackendService().negotiateAsset(widget.startup, value);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Investimento realizado com sucesso!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
+          child: AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -111,48 +183,130 @@ void showStartupDetailsDialog(
               ),
               const SizedBox(height: 24),
 
-              // --- Botão investir ---
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // fecha o dialog
-                    // Navega para a tela de negociação ou explore
-                    Navigator.pushNamed(context, '/explore');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
+              // --- Formulário de investimento (aparece ao clicar em Investir) ---
+              if (_showInvestForm) ...[
+                TextField(
+                  controller: _amountController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: 'Valor a investir (R\$)',
+                    prefixIcon: const Icon(Icons.monetization_on),
+                    border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
                   ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleInvest,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Confirmar Investimento',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => setState(() => _showInvestForm = false),
                   child: const Text(
-                    'Investir',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    'Voltar',
+                    style: TextStyle(
+                      color: AppColors.textBody,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
+              ] else ...[
+                // --- Botão investir ---
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() => _showInvestForm = true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Investir',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
 
-              // --- Botão fechar ---
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Fechar',
-                  style: TextStyle(
-                    color: AppColors.textBody,
-                    fontWeight: FontWeight.w600,
+                // --- Botão Perguntas (Q&A) ---
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => mescla_startup_questions.StartupQuestionsPage(startup: widget.startup),
+                        ),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text(
+                      'Perguntas (Q&A)',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 8),
+
+                // --- Botão fechar ---
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Fechar',
+                    style: TextStyle(
+                      color: AppColors.textBody,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-      );
-    },
-  );
+      ),
+      ),
+    );
+  }
 }
 
 Widget _buildInfoRow(IconData icon, String label, String value) {

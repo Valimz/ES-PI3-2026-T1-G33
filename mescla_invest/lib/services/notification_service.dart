@@ -24,7 +24,7 @@ class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
+  final String _baseUrl = 'http://172.16.227.216:3000'; // Chrome Web
 
   bool _initialized = false;
 

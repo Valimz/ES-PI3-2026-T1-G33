@@ -9,7 +9,7 @@ class BackendService {
   factory BackendService() => _instance;
 
   IO.Socket? _socket;
-  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
+  final String _baseUrl = 'http://172.16.232.111:3000'; // Chrome Web
 
   // Controladores de Stream locais para repassar os eventos do Socket
   final _walletStreamController = StreamController<Map<String, dynamic>?>.broadcast();
@@ -215,4 +215,54 @@ class BackendService {
       throw Exception(errorMap['error'] ?? "Erro no servidor ao aceitar oferta");
     }
   }
+
+  // --- Startups Questions ---
+  Future<void> sendQuestion(String startupId, String text, String visibility, List<String>? options) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+    
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/questions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'startupId': startupId,
+        'text': text,
+        'visibility': visibility,
+        'options': options,
+      }),
+    );
+
+    if (response.statusCode != 201) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao enviar pergunta");
+    }
+  }
+
+  Future<List<dynamic>> getQuestions(String startupId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+    
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/questions/$startupId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao buscar perguntas");
+    }
+
+    return jsonDecode(response.body);
+  }
+
 }

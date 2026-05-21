@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/ativo_card_widget.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/filtro_ativos_widget.dart';
@@ -29,7 +30,21 @@ class _PortfolioPageState extends State<PortfolioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Meus Investimentos'), centerTitle: true),
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Meus Investimentos',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SafeArea(
         child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: _startupsStream,
@@ -78,54 +93,76 @@ class _PortfolioPageState extends State<PortfolioPage> {
                 final variacaoPercentual =
                     _variacaoPercentual(valorTotal, variacaoReais);
 
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ResumoPortfolioHeader(
+                return ListView(
+                  children: [
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ResumoPortfolioHeader(
                         valorTotal: valorTotal,
                         variacaoEmReais: variacaoReais,
                         variacaoPercentual: variacaoPercentual,
                       ),
-                      const SizedBox(height: 16),
-                      Text('Filtrar por estágio',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      FiltroAtivosWidget(
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('Filtrar por estágio'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: FiltroAtivosWidget(
                         selecionado: _filtroSelecionado,
                         onSelecionar: (filtro) =>
                             setState(() => _filtroSelecionado = filtro),
                       ),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: filtrados.isEmpty
-                            ? const Center(
-                                child: Text(
-                                    'Nenhum investimento para o filtro selecionado.'))
-                            : ListView.separated(
-                                itemCount: filtrados.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (context, index) {
-                                  final inv = filtrados[index];
-                                  return AtivoCardWidget(
-                                    ativo: inv,
-                                    onTap: () => Navigator.pushNamed(
-                                      context,
-                                      '/analise',
-                                      arguments: inv,
-                                    ),
-                                  );
-                                },
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('Seus Ativos'),
+                    const SizedBox(height: 4),
+                    if (filtrados.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            'Nenhum investimento para o filtro selecionado.',
+                            style: TextStyle(
+                              color: AppColors.textBody,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...filtrados.map((inv) => Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 6),
+                            child: AtivoCardWidget(
+                              ativo: inv,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/analise',
+                                arguments: inv,
                               ),
-                      ),
-                    ],
-                  ),
+                            ),
+                          )),
+                    const SizedBox(height: 32),
+                  ],
                 );
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
         ),
       ),
     );

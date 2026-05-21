@@ -55,24 +55,43 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/login', (route) => false);
+          PopupMenuButton<String>(
+            icon: const CircleAvatar(
+              backgroundColor: AppColors.accent,
+              radius: 16,
+              child: Icon(Icons.person, size: 20, color: AppColors.primary),
+            ),
+            onSelected: (value) async {
+              if (value == 'mfa') {
+                Navigator.pushNamed(context, '/mfa');
+              } else if (value == 'logout') {
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil('/login', (route) => false);
+                }
               }
             },
-            tooltip: 'Sair da Conta',
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'mfa',
+                child: ListTile(
+                  leading: Icon(Icons.shield_outlined),
+                  title: Text('Ativar MFA'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: ListTile(
+                  leading: Icon(Icons.logout, color: Colors.red),
+                  title: Text('Sair da Conta', style: TextStyle(color: Colors.red)),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          const CircleAvatar(
-            backgroundColor: AppColors.accent,
-            radius: 16,
-            child: Icon(Icons.person, size: 20, color: AppColors.primary),
-          ),
-          const SizedBox(width: 16),
         ],
       ),
       body: SingleChildScrollView(

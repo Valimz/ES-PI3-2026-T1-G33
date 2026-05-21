@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/auth/presentation/pages/register_page.dart';
 import 'package:mescla_invest/features/home/presentation/pages/home_page.dart';
-import 'package:mescla_invest/services/firebase_auth_service.dart';
+import 'package:mescla_invest/features/mfa/presentation/pages/mfa_verify_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -130,16 +131,49 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       try {
-                        final authService = FirebaseAuthService();
-                        await authService.loginWithEmailAndPassword(
-                          _emailController.text,
-                          _passwordController.text,
+                        await FirebaseAuth.instance.signInWithEmailAndPassword(
+                          email: _emailController.text.trim(),
+                          password: _passwordController.text,
                         );
                         if (!context.mounted) return;
+
+                        // Login OK sem MFA → ir para o dashboard
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const HomePage()),
+                        );
+                      } on FirebaseAuthMultiFactorException catch (e) {
+                        // MFA necessário! Redirecionar para tela de verificação TOTP
+                        if (!context.mounted) return;
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                MfaVerifyPage(resolver: e.resolver),
+                          ),
+                        );
+                      } on FirebaseAuthException catch (e) {
+                        if (!context.mounted) return;
+                        String message;
+                        switch (e.code) {
+                          case 'user-not-found':
+                          case 'wrong-password':
+                          case 'invalid-credential':
+                            message = 'Email ou senha inválidos.';
+                            break;
+                          case 'user-disabled':
+                            message = 'Esta conta foi desativada.';
+                            break;
+                          case 'too-many-requests':
+                            message =
+                                'Muitas tentativas. Tente novamente mais tarde.';
+                            break;
+                          default:
+                            message = e.message ?? 'Erro ao fazer login.';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(message)),
                         );
                       } catch (e) {
                         if (!context.mounted) return;
