@@ -431,25 +431,14 @@ class FirestoreService {
     // Populando as startups
     final startupsCollection = _db.collection('startups');
     final query = await startupsCollection.limit(1).get();
-    
+
     if (query.docs.isEmpty) {
-      final List<Map<String, dynamic>> initialStartups = [
-        {"name": "EcoToken", "stage": "Em operação", "val": "R\$ 12,00"},
-        {"name": "HealthTech", "stage": "Em expansão", "val": "R\$ 45,50"},
-        {"name": "AgroData", "stage": "Nova", "val": "R\$ 5,00"},
-        {"name": "FinSol", "stage": "Em operação", "val": "R\$ 28,75"},
-        {"name": "Educa+", "stage": "Nova", "val": "R\$ 7,50"},
-        {"name": "Mobility Z", "stage": "Em expansão", "val": "R\$ 98,00"},
-        {"name": "Aura IA", "stage": "Nova", "val": "R\$ 21,30"},
-        {"name": "CleanEnergy", "stage": "Semente", "val": "R\$ 2,50"},
-        {"name": "SpaceT", "stage": "Em operação", "val": "R\$ 150,00"},
-        {"name": "BioGenesis", "stage": "Em expansão", "val": "R\$ 55,20"},
-      ];
-      
-      for (var startup in initialStartups) {
+      for (var startup in _initialStartupsSeed) {
         await startupsCollection.add(startup);
       }
       debugPrint("Startups semeadas com sucesso!");
+    } else {
+      await migrateStartupsSchema();
     }
 
     // Populando carteira do usuário atual (se logado)
@@ -457,7 +446,7 @@ class FirestoreService {
     if (user != null) {
       final walletRef = _db.collection('users').doc(user.uid).collection('wallet').doc('main');
       final walletDoc = await walletRef.get();
-      
+
       if (!walletDoc.exists) {
         await walletRef.set({
           "balance": "R\$ 15.250,00",
@@ -467,6 +456,135 @@ class FirestoreService {
       }
     }
   }
+
+  Future<void> migrateStartupsSchema() async {
+    final startupsCollection = _db.collection('startups');
+    final snapshot = await startupsCollection.get();
+
+    int updated = 0;
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final defaults = _startupDefaultsByName(data['name']?.toString() ?? '');
+      final Map<String, dynamic> patch = {};
+
+      for (final entry in defaults.entries) {
+        if (!data.containsKey(entry.key) || data[entry.key] == null) {
+          patch[entry.key] = entry.value;
+        }
+      }
+
+      if (patch.isNotEmpty) {
+        await doc.reference.update(patch);
+        updated++;
+      }
+    }
+    debugPrint("Migração de schema das startups: $updated documentos atualizados.");
+  }
+
+  Map<String, dynamic> _startupDefaultsByName(String name) {
+    final seeded = _initialStartupsSeed.firstWhere(
+      (s) => s['name'] == name,
+      orElse: () => const <String, dynamic>{},
+    );
+    return {
+      'description': seeded['description'] ?? '',
+      'sector': seeded['sector'] ?? '',
+      'capitalAportado': seeded['capitalAportado'] ?? 0,
+      'tokensEmitidos': seeded['tokensEmitidos'] ?? 0,
+      'socios': seeded['socios'] ?? <Map<String, dynamic>>[],
+      'mentoresConselho':
+          seeded['mentoresConselho'] ?? <String>[],
+      'videoUrl': seeded['videoUrl'],
+      'status': seeded['status'] ?? 'ativa',
+      'faq': seeded['faq'] ?? <Map<String, dynamic>>[],
+    };
+  }
+
+  static const List<Map<String, dynamic>> _initialStartupsSeed = [
+    {
+      "name": "EcoTech",
+      "stage": "Em operação",
+      "val": "R\$ 3,00",
+      "description": "Plataforma de monitoramento ambiental para empresas.",
+      "sector": "Cleantech",
+      "capitalAportado": 300000,
+      "tokensEmitidos": 100000,
+      "socios": [
+        {"nome": "Ana Souza", "percentual": 60},
+        {"nome": "Carlos Lima", "percentual": 40},
+      ],
+      "mentoresConselho": ["Mariana Prado"],
+      "videoUrl": "https://exemplo.com/demo1",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "FinFlow",
+      "stage": "Em expansão",
+      "val": "R\$ 2,00",
+      "description": "Gestão de fluxo de caixa para MEIs.",
+      "sector": "Fintech",
+      "capitalAportado": 500000,
+      "tokensEmitidos": 250000,
+      "socios": [
+        {"nome": "Roberto Dias", "percentual": 50},
+        {"nome": "Julia Mota", "percentual": 50},
+      ],
+      "mentoresConselho": ["Ricardo Santos"],
+      "videoUrl": "https://exemplo.com/demo2",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "AgroSmart",
+      "stage": "Nova",
+      "val": "R\$ 2,00",
+      "description": "IoT para otimização de irrigação.",
+      "sector": "Agtech",
+      "capitalAportado": 150000,
+      "tokensEmitidos": 75000,
+      "socios": [
+        {"nome": "Marcos Vinicius", "percentual": 100},
+      ],
+      "mentoresConselho": ["Arnaldo Souza"],
+      "videoUrl": "https://exemplo.com/demo3",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "HealthVibe",
+      "stage": "Em operação",
+      "val": "R\$ 2,00",
+      "description": "Telemedicina com IA para triagem.",
+      "sector": "Healthtech",
+      "capitalAportado": 800000,
+      "tokensEmitidos": 400000,
+      "socios": [
+        {"nome": "Beatriz Luz", "percentual": 70},
+        {"nome": "Hugo Vaz", "percentual": 30},
+      ],
+      "mentoresConselho": ["Sandra Meireles"],
+      "videoUrl": "https://exemplo.com/demo4",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "EduNext",
+      "stage": "Em expansão",
+      "val": "R\$ 2,25",
+      "description": "Plataforma de cursos gamificados.",
+      "sector": "Edutech",
+      "capitalAportado": 450000,
+      "tokensEmitidos": 200000,
+      "socios": [
+        {"nome": "Tiago André", "percentual": 100},
+      ],
+      "mentoresConselho": ["Fernando Silva"],
+      "videoUrl": "https://exemplo.com/demo5",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+  ];
 
   // --- MÉTODOS DE LIMPEZA ---
   Future<void> removePlaceholderAssets() async {

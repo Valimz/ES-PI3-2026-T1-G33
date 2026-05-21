@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
-import 'package:mescla_invest/features/explore/presentation/widgets/startup_details_dialog.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/filtro_ativos_widget.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 
@@ -131,7 +130,11 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildStartupCard(Map<String, String> startup) {
     return GestureDetector(
-      onTap: () => showStartupDetailsDialog(context, startup),
+      onTap: () => Navigator.pushNamed(
+        context,
+        '/startup-detail',
+        arguments: startup,
+      ),
       child: Card(
         elevation: 2,
         margin: const EdgeInsets.only(bottom: 16),
