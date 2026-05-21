@@ -118,11 +118,6 @@ class _NotificationsPageState extends State<NotificationsPage>
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.flag, color: Colors.white),
-            tooltip: 'Marcos',
-            onPressed: () => Navigator.pushNamed(context, '/milestones'),
-          ),
           TextButton.icon(
             onPressed: () async {
               await _notifService.markAllAsRead();
