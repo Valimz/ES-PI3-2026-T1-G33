@@ -5,6 +5,7 @@ import 'package:mescla_invest/features/auth/presentation/pages/login_page.dart';
 import 'package:mescla_invest/features/auth/presentation/pages/register_page.dart';
 import 'package:mescla_invest/features/esqueci_senha/presentation/pages/esqueci_senha_page.dart';
 import 'package:mescla_invest/features/explore/presentation/pages/explore_page.dart';
+import 'package:mescla_invest/features/explore/presentation/pages/startup_detail_page.dart';
 import 'package:mescla_invest/features/home/presentation/pages/home_page.dart';
 import 'package:mescla_invest/features/mfa/presentation/pages/mfa_page.dart';
 import 'package:mescla_invest/features/p2p/presentation/pages/p2p_page.dart';
@@ -52,6 +53,7 @@ class InvestApp extends StatelessWidget {
         '/register': (context) => const RegisterPage(),
         '/home': (context) => const HomePage(),
         '/explore': (context) => const ExplorePage(),
+        '/startup-detail': (context) => const StartupDetailPage(),
         '/portfolio': (context) => const PortfolioPage(),
         '/wallet': (context) => const WalletPage(),
         '/p2p': (context) => const P2PPage(),

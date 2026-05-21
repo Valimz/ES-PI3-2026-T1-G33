@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
-import 'package:mescla_invest/features/explore/presentation/widgets/startup_details_dialog.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/notification_service.dart';
@@ -336,7 +335,11 @@ class _HomePageState extends State<HomePage> {
             itemBuilder: (context, index) {
               final startup = startups[index];
               return GestureDetector(
-                onTap: () => showStartupDetailsDialog(context, startup),
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  '/startup-detail',
+                  arguments: startup,
+                ),
                 child: Container(
                   width: 160,
                   margin: const EdgeInsets.only(right: 16),
