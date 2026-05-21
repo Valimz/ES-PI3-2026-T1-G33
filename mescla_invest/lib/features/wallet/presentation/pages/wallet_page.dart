@@ -46,6 +46,11 @@ class _WalletPageState extends State<WalletPage> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.flag, color: AppColors.primary),
+            tooltip: 'Marcos',
+            onPressed: () => Navigator.pushNamed(context, '/milestones'),
+          ),
+          IconButton(
             icon: const Icon(Icons.cleaning_services, color: AppColors.primary),
             tooltip: "Limpar ativos placeholders (teste)",
             onPressed: () async {
