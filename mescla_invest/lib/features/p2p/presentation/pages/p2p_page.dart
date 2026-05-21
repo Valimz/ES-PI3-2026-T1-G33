@@ -38,6 +38,13 @@ class _P2PPageState extends State<P2PPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.of(context).pop(),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.flag, color: Colors.white),
+              tooltip: 'Marcos',
+              onPressed: () => Navigator.pushNamed(context, '/milestones'),
+            ),
+          ],
         ),
         body: const TabBarView(
           children: [
