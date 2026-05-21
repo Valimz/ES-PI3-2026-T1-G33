@@ -10,7 +10,9 @@ import 'package:http/http.dart' as http;
 /// Handler de background — deve ser top-level function
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('📩 Notificação recebida em background: ${message.notification?.title}');
+  debugPrint(
+    '📩 Notificação recebida em background: ${message.notification?.title}',
+  );
 }
 
 class NotificationService {
@@ -47,7 +49,9 @@ class NotificationService {
     debugPrint('🔔 Permissão de notificação: ${settings.authorizationStatus}');
 
     // Configurar notificações locais (foreground)
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -70,7 +74,9 @@ class NotificationService {
       importance: Importance.high,
     );
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
 
     // Listeners FCM
@@ -101,10 +107,10 @@ class NotificationService {
           .collection('tokens')
           .doc(token)
           .set({
-        'token': token,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'platform': 'android',
-      });
+            'token': token,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'platform': 'android',
+          });
 
       // Também registrar no backend
       try {
@@ -176,11 +182,13 @@ class NotificationService {
         .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList(),
+        );
   }
 
   /// Stream da contagem de notificações não-lidas
