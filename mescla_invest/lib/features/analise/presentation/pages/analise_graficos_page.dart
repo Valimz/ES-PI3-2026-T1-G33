@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:mescla_invest/features/analise/data/serie_valorizacao_data.dart';
 import 'package:mescla_invest/features/analise/models/periodo_analise.dart';
 import 'package:mescla_invest/features/analise/presentation/widgets/resumo_valorizacao_card.dart';
 import 'package:mescla_invest/features/analise/presentation/widgets/valorizacao_line_chart_card.dart';
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
+import 'package:mescla_invest/services/firestore_service.dart';
 
 class AnaliseGraficosPage extends StatefulWidget {
   const AnaliseGraficosPage({super.key});
@@ -33,73 +33,114 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
       );
     }
 
-    final pontos = SerieValorizacaoData.pontosPorPeriodo(
-      periodo: _periodoSelecionado,
-      startup: startup,
-    );
-    final valorAtual = pontos.last;
-    final valorInicial = pontos.first;
-    final variacao = valorInicial != 0
-        ? ((valorAtual - valorInicial) / valorInicial) * 100
-        : 0.0;
-    final isPositiva = variacao >= 0;
-
     return Scaffold(
-      appBar: AppBar(
-          title: const Text('Análise do Token'), centerTitle: true),
+      appBar: AppBar(title: const Text('Análise do Token'), centerTitle: true),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Evolução da valorização',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: FirestoreService().getAcquisitionsByStartup(startup.nome),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('Erro ao carregar histórico: ${snapshot.error}'),
+              );
+            }
+
+            final transactions = snapshot.data ?? [];
+            final pontos = _pontosPorTransacoes(transactions, startup);
+            final valorAtual = pontos.last;
+            final valorInicial = pontos.first;
+            final variacao = valorInicial != 0
+                ? ((valorAtual - valorInicial) / valorInicial) * 100
+                : 0.0;
+            final isPositiva = variacao >= 0;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Evolução da valorização',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    transactions.isEmpty
+                        ? 'Ainda não há histórico real. Exibindo preço inicial e atual.'
+                        : 'Dados baseados nas transações registradas no sistema.',
+                    style: const TextStyle(color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+                  _StartupResumoCard(startup: startup),
+                  const SizedBox(height: 16),
+                  ResumoValorizacaoCard(
+                    valorAtual: valorAtual,
+                    variacao: variacao,
+                    isPositiva: isPositiva,
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Período da valorização',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: PeriodoAnalise.values
+                        .map((periodo) => ChoiceChip(
+                              label: Text(periodo.label),
+                              selected: _periodoSelecionado == periodo,
+                              onSelected: (_) =>
+                                  setState(() => _periodoSelecionado = periodo),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  ValorizacaoLineChartCard(
+                    pontos: pontos,
+                    isPositiva: isPositiva,
+                    titulo: 'Valorização de ${startup.nome}',
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Dados baseados na série histórica simulada do token.',
-                style: TextStyle(color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 16),
-              _StartupResumoCard(startup: startup),
-              const SizedBox(height: 16),
-              ResumoValorizacaoCard(
-                valorAtual: valorAtual,
-                variacao: variacao,
-                isPositiva: isPositiva,
-              ),
-              const SizedBox(height: 16),
-              Text('Período da valorização',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: PeriodoAnalise.values
-                    .map((periodo) => ChoiceChip(
-                          label: Text(periodo.label),
-                          selected: _periodoSelecionado == periodo,
-                          onSelected: (_) =>
-                              setState(() => _periodoSelecionado = periodo),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-              ValorizacaoLineChartCard(
-                pontos: pontos,
-                isPositiva: isPositiva,
-                titulo: 'Valorização de ${startup.nome}',
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
+  }
+
+  List<double> _pontosPorTransacoes(
+      List<Map<String, dynamic>> transactions, InvestimentoModel startup) {
+    final pontos = <double>[];
+
+    for (final tx in transactions) {
+      if (tx['type'] != 'buy') continue;
+
+      final amount = FirestoreService()
+          .parseCurrency(tx['amount']?.toString() ?? 'R\$ 0,00');
+      final quotasStr = tx['quotas']?.toString().split(' ').first ?? '0';
+      final quotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
+
+      if (quotas <= 0) continue;
+      pontos.add(amount / quotas);
+    }
+
+    if (pontos.isEmpty) {
+      return [startup.posicao.precoMedio, startup.posicao.valorAtual];
+    }
+
+    if (pontos.last != startup.posicao.valorAtual) {
+      pontos.add(startup.posicao.valorAtual);
+    }
+
+    return pontos;
   }
 }
 
