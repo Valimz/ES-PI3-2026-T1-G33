@@ -102,24 +102,116 @@ class StartupDetailPage extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.trending_up),
-              label: const Text(
-                'Investir nesta startup',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.primary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: () => _showInvestBottomSheet(context, data),
-            ),
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: FirestoreService().getUserAssets(),
+            builder: (context, snapshot) {
+              final assets = snapshot.data ?? const <Map<String, dynamic>>[];
+              Map<String, dynamic>? userAsset;
+              for (final asset in assets) {
+                if (asset['name']?.toString() != name) continue;
+                final amountStr =
+                    asset['amount']?.toString().split(' ').first ?? '0';
+                final q =
+                    double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
+                if (q > 0) {
+                  userAsset = asset;
+                  break;
+                }
+              }
+
+              if (userAsset == null) {
+                return SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.trending_up),
+                    label: const Text(
+                      'Investir nesta startup',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => _showInvestBottomSheet(context, data),
+                  ),
+                );
+              }
+
+              final ownedAsset = userAsset;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Comprar mais',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => _showInvestBottomSheet(context, data),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.call_split),
+                            label: const Text('Vender parte'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () =>
+                                _showPartialSellSheet(context, ownedAsset),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.sell_outlined),
+                            label: const Text('Vender tudo'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () =>
+                                _confirmAndSellAll(context, ownedAsset),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -894,6 +986,135 @@ Color stageBadgeColor(String stage) {
       return const Color(0xFFD97706);
     default:
       return Colors.grey;
+  }
+}
+
+Future<void> _confirmAndSellAll(
+    BuildContext context, Map<String, dynamic> asset) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final confirmar = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Vender todos os tokens?'),
+        content: Text(
+            'Você venderá todas as cotas de ${asset['name']}. Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Vender'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmar != true) return;
+  try {
+    await BackendService().sellAllAsset(asset);
+    messenger.showSnackBar(
+      SnackBar(
+          content: Text('Todos os tokens de ${asset['name']} vendidos!')),
+    );
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('Erro ao vender: $e')));
+  }
+}
+
+Future<void> _showPartialSellSheet(
+    BuildContext context, Map<String, dynamic> asset) async {
+  final amountStr = asset['amount']?.toString() ?? '0 Cotas';
+  final parts = amountStr.split(' ');
+  final totalQuotas =
+      double.tryParse((parts.first).replaceAll(',', '.')) ?? 0.0;
+  final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Cotas';
+  final controller = TextEditingController();
+  final messenger = ScaffoldMessenger.of(context);
+
+  if (totalQuotas <= 0) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Nenhuma cota disponível para venda.')),
+    );
+    return;
+  }
+
+  final result = await showDialog<double>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: Text('Vender parte de ${asset['name']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Você possui ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')} $unitLabel',
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Cotas a vender',
+                prefixIcon: const Icon(Icons.pie_chart_outline),
+                helperText:
+                    'Máximo: ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')}',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final v = double.tryParse(controller.text.replaceAll(',', '.'));
+              if (v == null || v <= 0) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                      content: Text('Insira uma quantidade válida')),
+                );
+                return;
+              }
+              if (v > totalQuotas + 1e-9) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(
+                      content: Text('Quantidade maior do que o disponível')),
+                );
+                return;
+              }
+              Navigator.pop(dialogContext, v);
+            },
+            child: const Text('Vender'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (result == null) return;
+  try {
+    await BackendService().sellPartialAsset(asset, result);
+    messenger.showSnackBar(
+      SnackBar(
+          content: Text(
+              'Venda de ${result.toStringAsFixed(1).replaceAll('.', ',')} $unitLabel de ${asset['name']} realizada!')),
+    );
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('Erro ao vender: $e')));
   }
 }
 

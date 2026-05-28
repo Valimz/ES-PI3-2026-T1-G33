@@ -124,7 +124,7 @@ class BackendService {
     if (user == null) throw Exception("Usuário não logado");
 
     final token = await user.getIdToken();
-    
+
     final response = await http.post(
       Uri.parse('$_baseUrl/api/wallet/sell'),
       headers: {
@@ -139,6 +139,53 @@ class BackendService {
     if (response.statusCode != 200) {
       final errorMap = jsonDecode(response.body);
       throw Exception(errorMap['error'] ?? "Erro no servidor ao vender");
+    }
+  }
+
+  Future<void> sellPartialAsset(
+      Map<String, dynamic> asset, double quotasToSell) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/wallet/sellPartial'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'asset': asset,
+        'quotasToSell': quotasToSell,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(
+          errorMap['error'] ?? "Erro no servidor ao vender parcialmente");
+    }
+  }
+
+  Future<void> withdrawFunds(double amountToWithdraw) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/wallet/withdraw'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'amount': amountToWithdraw}),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao retirar");
     }
   }
 
