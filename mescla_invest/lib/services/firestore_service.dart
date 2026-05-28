@@ -64,6 +64,25 @@ class FirestoreService {
         }).toList()).asBroadcastStream();
   }
 
+  Stream<List<Map<String, dynamic>>> getAcquisitionsByStartup(
+      String startupName) {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('acquisitions')
+        .where('startupName', isEqualTo: startupName)
+        .orderBy('date', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList()).asBroadcastStream();
+  }
+
   // --- MÉTODOS DE NEGOCIAÇÃO E CARTEIRA ---
   
   // Utilitário para formatar/desformatar moeda (BRL)
@@ -193,6 +212,8 @@ class FirestoreService {
       transaction.set(acquisitionRef, {
         'type': 'buy',
         'title': 'Compra: ${startup['name']}',
+        'startupName': startup['name'],
+        'startupId': startup['id'] ?? '',
         'amount': _currencyFormat.format(amountToBuy),
         'quotas': "${boughtQuotas.toStringAsFixed(1)}$quotasPrefix",
         'date': FieldValue.serverTimestamp(),
@@ -236,6 +257,8 @@ class FirestoreService {
       transaction.set(acquisitionRef, {
         'type': 'sell',
         'title': 'Venda: ${assetData['name']}',
+        'startupName': assetData['name'],
+        'startupId': asset['id'] ?? '',
         'amount': _currencyFormat.format(currentAssetValue),
         'quotas': quotasStr,
         'date': FieldValue.serverTimestamp(),
