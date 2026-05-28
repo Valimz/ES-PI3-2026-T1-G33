@@ -22,7 +22,7 @@ class FirebaseAuthService {
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
         throw Exception('Email ou senha inválidos.');
       } else {
-        throw Exception('Erro ao fazer login: \${e.message}');
+        throw Exception('Erro ao fazer login: ${e.message}');
       }
     }
   }
@@ -66,7 +66,7 @@ class FirebaseAuthService {
       } else if (e.code == 'email-already-in-use') {
         throw Exception('A conta já existe para este email.');
       } else {
-        throw Exception('Erro ao registrar: \${e.message}');
+        throw Exception('Erro ao registrar: ${e.message}');
       }
     }
   }

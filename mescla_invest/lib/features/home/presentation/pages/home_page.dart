@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/notification_service.dart';
@@ -89,29 +90,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 0,
-        onTap: (index) {
-          if (index == 1) Navigator.pushNamed(context, '/explore');
-          if (index == 2) Navigator.pushNamed(context, '/portfolio');
-          if (index == 3) Navigator.pushNamed(context, '/wallet');
-          if (index == 4) Navigator.pushNamed(context, '/p2p');
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.search), label: 'Explorar'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.pie_chart), label: 'Portfólio'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_wallet), label: 'Carteira'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.storefront), label: 'Mercado P2P'),
-        ],
-      ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
     );
   }
 
@@ -196,7 +175,6 @@ class _HomePageState extends State<HomePage> {
   Widget _buildPortfolioChart() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(20),
       height: 150,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -206,95 +184,165 @@ class _HomePageState extends State<HomePage> {
               color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
         ],
       ),
-      child: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _assetsStream,
-        builder: (context, assetsSnapshot) {
-          return StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _startupsStream,
-            builder: (context, startupsSnapshot) {
-              String appreciationText = '+ 0,0%';
-              Color appreciationColor = AppColors.accent;
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () =>
+              Navigator.of(context).pushReplacementNamed('/portfolio'),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _assetsStream,
+              builder: (context, assetsSnapshot) {
+                return StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: _startupsStream,
+                  builder: (context, startupsSnapshot) {
+                    final assets = assetsSnapshot.data ?? [];
+                    final startups = startupsSnapshot.data ?? [];
 
-              if (assetsSnapshot.hasData && startupsSnapshot.hasData) {
-                final assets = assetsSnapshot.data ?? [];
-                final startups = startupsSnapshot.data ?? [];
+                    final hasActiveAssets = assets.any((asset) {
+                      final amountStr =
+                          asset['amount']?.toString().split(' ').first ?? '0';
+                      final q = double.tryParse(
+                              amountStr.replaceAll(',', '.')) ??
+                          0.0;
+                      return q > 0;
+                    });
 
-                double totalInvested = 0.0;
-                double totalCurrent = 0.0;
+                    if (assetsSnapshot.hasData && !hasActiveAssets) {
+                      return _buildPortfolioEmptyState();
+                    }
 
-                for (var asset in assets) {
-                  final investedValStr =
-                      asset['value']?.toString() ?? 'R\$ 0,00';
-                  final investedVal =
-                      FirestoreService().parseCurrency(investedValStr);
+                    String appreciationText = '+ 0,0%';
+                    Color appreciationColor = AppColors.accent;
 
-                  final amountStr =
-                      asset['amount']?.toString().split(' ').first ?? '0';
-                  final currentQuotas =
-                      double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
+                    if (assetsSnapshot.hasData && startupsSnapshot.hasData) {
+                      double totalInvested = 0.0;
+                      double totalCurrent = 0.0;
 
-                  if (currentQuotas > 0) {
-                    totalInvested += investedVal;
+                      for (var asset in assets) {
+                        final investedValStr =
+                            asset['value']?.toString() ?? 'R\$ 0,00';
+                        final investedVal =
+                            FirestoreService().parseCurrency(investedValStr);
 
-                    final startupName = asset['name'];
-                    final startup = startups.firstWhere(
-                        (s) => s['name'] == startupName,
-                        orElse: () => {});
-                    final currentPriceStr =
-                        startup['val']?.toString() ?? 'R\$ 0,00';
-                    final currentPrice =
-                        FirestoreService().parseCurrency(currentPriceStr);
+                        final amountStr =
+                            asset['amount']?.toString().split(' ').first ?? '0';
+                        final currentQuotas = double.tryParse(
+                                amountStr.replaceAll(',', '.')) ??
+                            0.0;
 
-                    totalCurrent += (currentQuotas * currentPrice);
-                  }
-                }
+                        if (currentQuotas > 0) {
+                          totalInvested += investedVal;
 
-                if (totalInvested > 0) {
-                  double appreciationPercent =
-                      ((totalCurrent / totalInvested) - 1) * 100;
-                  appreciationText =
-                      "${appreciationPercent >= 0 ? '+' : ''}${appreciationPercent.toStringAsFixed(2)}%";
-                  appreciationText = appreciationText.replaceAll('.', ',');
+                          final startupName = asset['name'];
+                          final startup = startups.firstWhere(
+                              (s) => s['name'] == startupName,
+                              orElse: () => {});
+                          final currentPriceStr =
+                              startup['val']?.toString() ?? 'R\$ 0,00';
+                          final currentPrice = FirestoreService()
+                              .parseCurrency(currentPriceStr);
 
-                  if (appreciationPercent < 0) {
-                    appreciationColor = Colors.redAccent;
-                  }
-                }
-              }
+                          totalCurrent += (currentQuotas * currentPrice);
+                        }
+                      }
 
-              return Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      if (totalInvested > 0) {
+                        double appreciationPercent =
+                            ((totalCurrent / totalInvested) - 1) * 100;
+                        appreciationText =
+                            "${appreciationPercent >= 0 ? '+' : ''}${appreciationPercent.toStringAsFixed(2)}%";
+                        appreciationText =
+                            appreciationText.replaceAll('.', ',');
+
+                        if (appreciationPercent < 0) {
+                          appreciationColor = Colors.redAccent;
+                        }
+                      }
+                    }
+
+                    return Row(
                       children: [
-                        const Text('Valorização Total',
-                            style: TextStyle(color: Colors.grey)),
-                        Text(appreciationText,
-                            style: TextStyle(
-                                color: appreciationColor,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold)),
-                        Text('Baseado nos ativos atuais',
-                            style: TextStyle(
-                                color: Colors.grey.shade400, fontSize: 12)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('Valorização Total',
+                                  style: TextStyle(color: Colors.grey)),
+                              Text(appreciationText,
+                                  style: TextStyle(
+                                      color: appreciationColor,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold)),
+                              Text('Toque para ver seu portfólio',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          appreciationText.startsWith('-')
+                              ? Icons.trending_down
+                              : Icons.trending_up,
+                          size: 80,
+                          color: appreciationColor.withValues(alpha: 0.3),
+                        ),
                       ],
-                    ),
-                  ),
-                  Icon(
-                    appreciationText.startsWith('-')
-                        ? Icons.trending_down
-                        : Icons.trending_up,
-                    size: 80,
-                    color: appreciationColor.withValues(alpha: 0.3),
-                  ),
-                ],
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildPortfolioEmptyState() {
+    return Row(
+      children: [
+        Container(
+          height: 48,
+          width: 48,
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.pie_chart_outline,
+              color: AppColors.primary, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Você ainda não possui ativos',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Explore startups e faça seu primeiro investimento.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right, color: Colors.grey),
+      ],
     );
   }
 

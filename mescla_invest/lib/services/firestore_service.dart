@@ -242,6 +242,147 @@ class FirestoreService {
       });
     });
   }
+  // --- MÉTODOS DE PERGUNTAS PRIVADAS (FAQ) ---
+  Future<void> addPrivateQuestion(String startupId, String pergunta) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    if (pergunta.trim().isEmpty) throw Exception("A pergunta não pode ser vazia");
+
+    final startupRef = _db.collection('startups').doc(startupId);
+    final newId = DateTime.now().microsecondsSinceEpoch.toString();
+    await startupRef.update({
+      'faq': FieldValue.arrayUnion([
+        {
+          'id': newId,
+          'pergunta': pergunta.trim(),
+          'resposta': '',
+          'publico': false,
+          'askerId': user.uid,
+          'createdAt': DateTime.now().toIso8601String(),
+        }
+      ]),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getMyPrivateQuestions(String startupId) {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db
+        .collection('startups')
+        .doc(startupId)
+        .snapshots()
+        .map((snap) {
+      final data = snap.data();
+      if (data == null) return <Map<String, dynamic>>[];
+      final faq = data['faq'];
+      if (faq is! List) return <Map<String, dynamic>>[];
+      return faq
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .where((q) => q['askerId'] == user.uid)
+          .toList();
+    }).asBroadcastStream();
+  }
+
+  Future<void> editPrivateQuestion(
+      String startupId, Map<String, dynamic> original, String novaPergunta) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    final novaTrim = novaPergunta.trim();
+    if (novaTrim.isEmpty) throw Exception("A pergunta não pode ser vazia");
+    if (original['askerId'] != user.uid) {
+      throw Exception("Você só pode editar suas próprias perguntas");
+    }
+
+    final startupRef = _db.collection('startups').doc(startupId);
+
+    await _db.runTransaction((transaction) async {
+      final snap = await transaction.get(startupRef);
+      if (!snap.exists) throw Exception("Startup não encontrada");
+
+      final data = snap.data()!;
+      final rawFaq = data['faq'];
+      final List<dynamic> faq =
+          rawFaq is List ? List<dynamic>.from(rawFaq) : <dynamic>[];
+
+      bool encontrou = false;
+      final List<Map<String, dynamic>> novoFaq = faq
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .map((q) {
+        if (!encontrou && _matchesQuestion(q, original)) {
+          encontrou = true;
+          if (q['publico'] == true) {
+            throw Exception(
+                "Pergunta já publicada não pode ser editada");
+          }
+          return {
+            ...q,
+            'pergunta': novaTrim,
+            'editedAt': DateTime.now().toIso8601String(),
+          };
+        }
+        return q;
+      }).toList();
+
+      if (!encontrou) throw Exception("Pergunta não encontrada");
+
+      transaction.update(startupRef, {'faq': novoFaq});
+    });
+  }
+
+  Future<void> deletePrivateQuestion(
+      String startupId, Map<String, dynamic> original) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    if (original['askerId'] != user.uid) {
+      throw Exception("Você só pode excluir suas próprias perguntas");
+    }
+
+    final startupRef = _db.collection('startups').doc(startupId);
+
+    await _db.runTransaction((transaction) async {
+      final snap = await transaction.get(startupRef);
+      if (!snap.exists) throw Exception("Startup não encontrada");
+
+      final data = snap.data()!;
+      final rawFaq = data['faq'];
+      final List<dynamic> faq =
+          rawFaq is List ? List<dynamic>.from(rawFaq) : <dynamic>[];
+
+      bool removeu = false;
+      final List<Map<String, dynamic>> novoFaq = [];
+      for (final item in faq) {
+        if (item is! Map) continue;
+        final q = Map<String, dynamic>.from(item);
+        if (!removeu && _matchesQuestion(q, original)) {
+          if (q['publico'] == true) {
+            throw Exception(
+                "Pergunta já publicada não pode ser excluída");
+          }
+          removeu = true;
+          continue;
+        }
+        novoFaq.add(q);
+      }
+
+      if (!removeu) throw Exception("Pergunta não encontrada");
+
+      transaction.update(startupRef, {'faq': novoFaq});
+    });
+  }
+
+  bool _matchesQuestion(Map<String, dynamic> q, Map<String, dynamic> original) {
+    final origId = original['id'];
+    if (origId != null && q['id'] != null) {
+      return q['id'] == origId;
+    }
+    return q['askerId'] == original['askerId'] &&
+        q['pergunta'] == original['pergunta'] &&
+        q['createdAt'] == original['createdAt'];
+  }
+
   // --- MÉTODOS P2P ---
   Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
     final user = _auth.currentUser;

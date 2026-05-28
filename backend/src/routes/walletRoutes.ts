@@ -34,6 +34,29 @@ export const parseCurrency = (val: string) => {
   return isNaN(parsed) ? 0.0 : parsed;
 };
 
+const removeUserPrivateQuestions = async (startupName: string, userId: string) => {
+  const query = await db
+    .collection('startups')
+    .where('name', '==', startupName)
+    .limit(1)
+    .get();
+
+  if (query.empty) return;
+  const startupRef = query.docs[0]!.ref;
+
+  await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(startupRef);
+    if (!snap.exists) return;
+    const data = snap.data() || {};
+    const faq = Array.isArray(data.faq) ? data.faq : [];
+    const filtered = faq.filter((q: any) =>
+      !(q && typeof q === 'object' && q.askerId === userId)
+    );
+    if (filtered.length === faq.length) return;
+    transaction.update(startupRef, { faq: filtered });
+  });
+};
+
 // Rota de Depositar
 router.post('/addFunds', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -112,32 +135,31 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
       const walletDoc = await transaction.get(walletRef);
       if (!walletDoc.exists) throw new Error("Carteira não encontrada");
 
+      const assetDoc = existingAssetRef ? await transaction.get(existingAssetRef) : null;
+
       const walletData = walletDoc.data()!;
       const currentBalance = parseCurrency(walletData.balance || 'R$ 0,00');
-      
+
       if (currentBalance < amountToBuy) {
         throw new Error("Saldo insuficiente");
       }
-
-      // Deduza o valor
-      const newBalance = currentBalance - amountToBuy;
-      transaction.update(walletRef, {
-        balance: formatCurrency(newBalance)
-      });
 
       const startupPrice = parseCurrency(startup.val || 'R$ 1,00');
       const quotasToBuy = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
       const prefix = ` ${startup.name.substring(0, 2).toUpperCase()}`;
 
-      if (existingAssetRef) {
-        // Re-lê o ativo dentro da transaction para consistência
-        const assetDoc = await transaction.get(existingAssetRef);
+      const newBalance = currentBalance - amountToBuy;
+      transaction.update(walletRef, {
+        balance: formatCurrency(newBalance)
+      });
+
+      if (existingAssetRef && assetDoc) {
         const assetData = assetDoc.data()!;
-        
+
         const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');
         const quotasStr = assetData.amount?.toString().split(' ')[0] || '0';
         const currentQuotas = parseFloat(quotasStr.replace(',', '.')) || 0.0;
-        
+
         const newQuotas = currentQuotas + quotasToBuy;
         const existingPrefix = assetData.amount?.toString().split(' ').length === 2 ? ` ${assetData.amount.toString().split(' ')[1]}` : ' Cotas';
 
@@ -146,7 +168,6 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
           amount: `${newQuotas.toFixed(1).replace('.', ',')}${existingPrefix}`
         });
       } else {
-        // Cria novo ativo
         const docRef = assetsCollection.doc();
         transaction.set(docRef, {
           name: startup.name,
@@ -194,31 +215,31 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
 
     const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
     const assetRef = db.collection('users').doc(user.uid).collection('assets').doc(asset.id);
-    
+
+    let soldAssetName = '';
+
     await db.runTransaction(async (transaction) => {
       const walletDoc = await transaction.get(walletRef);
       const assetDoc = await transaction.get(assetRef);
-      
+
       if (!walletDoc.exists) throw new Error("Carteira não encontrada");
       if (!assetDoc.exists) throw new Error("Ativo não encontrado");
 
       const walletData = walletDoc.data()!;
       const currentBalance = parseCurrency(walletData.balance || 'R$ 0,00');
-      
+
       const assetData = assetDoc.data()!;
       const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');
       const quotasStr = assetData.amount?.toString() || '0 Cotas';
-      
-      // Adiciona o valor total do ativo de volta à carteira
+      soldAssetName = assetData.name?.toString() || '';
+
       const newBalance = currentBalance + currentAssetValue;
       transaction.update(walletRef, {
         balance: formatCurrency(newBalance)
       });
 
-      // Remove o ativo
       transaction.delete(assetRef);
 
-      // Salva o histórico
       const acquisitionRef = db.collection('users').doc(user.uid).collection('acquisitions').doc();
       transaction.set(acquisitionRef, {
         type: 'sell',
@@ -229,7 +250,14 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
       });
     });
 
-    // Enviar notificação
+    if (soldAssetName) {
+      try {
+        await removeUserPrivateQuestions(soldAssetName, user.uid);
+      } catch (cleanupErr) {
+        console.error('Falha ao limpar perguntas privadas após venda:', cleanupErr);
+      }
+    }
+
     await sendNotification(user.uid, {
       title: 'Venda realizada',
       body: `Você vendeu seus ativos de ${asset.name || 'startup'}.`,

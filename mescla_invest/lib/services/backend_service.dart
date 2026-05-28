@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/core/config/app_config.dart';
 
 class BackendService {
   static final BackendService _instance = BackendService._internal();
   factory BackendService() => _instance;
 
   IO.Socket? _socket;
-  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
+  final String _baseUrl = AppConfig.apiBaseUrl;
 
   // Controladores de Stream locais para repassar os eventos do Socket
   final _walletStreamController = StreamController<Map<String, dynamic>?>.broadcast();
