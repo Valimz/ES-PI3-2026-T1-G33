@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/features/analise/models/periodo_analise.dart';
 import 'package:mescla_invest/features/analise/presentation/widgets/resumo_valorizacao_card.dart';
@@ -50,7 +51,11 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
             }
 
             final transactions = snapshot.data ?? [];
-            final pontos = _pontosPorTransacoes(transactions, startup);
+            final pontos = _pontosPorTransacoes(
+              transactions,
+              startup,
+              _periodoSelecionado,
+            );
             final valorAtual = pontos.last;
             final valorInicial = pontos.first;
             final variacao = valorInicial != 0
@@ -117,32 +122,85 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
   }
 
   List<double> _pontosPorTransacoes(
-      List<Map<String, dynamic>> transactions, InvestimentoModel startup) {
-    final pontos = <double>[];
+    List<Map<String, dynamic>> transactions,
+    InvestimentoModel startup,
+    PeriodoAnalise periodo,
+  ) {
+    final cutoff = _periodoInicio(periodo, DateTime.now());
 
-    for (final tx in transactions) {
-      if (tx['type'] != 'buy') continue;
+    final pontos = transactions
+        .where((tx) => tx['type'] == 'buy')
+        .map((tx) {
+          final date = _getTransactionDate(tx);
+          if (date == null) return null;
+          return _TransactionPoint(
+            date: date,
+            pricePerToken: _pricePerToken(tx),
+          );
+        })
+        .where((point) => point != null && !point.date.isBefore(cutoff))
+        .cast<_TransactionPoint>()
+        .toList();
 
-      final amount = FirestoreService()
-          .parseCurrency(tx['amount']?.toString() ?? 'R\$ 0,00');
-      final quotasStr = tx['quotas']?.toString().split(' ').first ?? '0';
-      final quotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
+    pontos.sort((a, b) => a.date.compareTo(b.date));
 
-      if (quotas <= 0) continue;
-      pontos.add(amount / quotas);
-    }
+    final valores = pontos.map((point) => point.pricePerToken).toList();
 
-    if (pontos.isEmpty) {
+    if (valores.isEmpty) {
       return [startup.posicao.precoMedio, startup.posicao.valorAtual];
     }
 
-    if (pontos.last != startup.posicao.valorAtual) {
-      pontos.add(startup.posicao.valorAtual);
+    if (valores.last != startup.posicao.valorAtual) {
+      valores.add(startup.posicao.valorAtual);
     }
 
-    return pontos;
+    return valores;
+  }
+
+  DateTime _periodoInicio(PeriodoAnalise periodo, DateTime reference) {
+    switch (periodo) {
+      case PeriodoAnalise.dia:
+        return reference.subtract(const Duration(days: 1));
+      case PeriodoAnalise.semana:
+        return reference.subtract(const Duration(days: 7));
+      case PeriodoAnalise.mes:
+        return reference.subtract(const Duration(days: 30));
+      case PeriodoAnalise.semestre:
+        return reference.subtract(const Duration(days: 180));
+      case PeriodoAnalise.ytd:
+        return DateTime(reference.year, 1, 1);
+    }
+  }
+
+  double _pricePerToken(Map<String, dynamic> tx) {
+    final amount = FirestoreService().parseCurrency(tx['amount']?.toString() ?? 'R\$ 0,00');
+    final quotasStr = tx['quotas']?.toString().split(' ').first ?? '0';
+    final quotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
+    return quotas > 0 ? amount / quotas : 0.0;
+  }
+
+  DateTime? _getTransactionDate(Map<String, dynamic> tx) {
+    final rawDate = tx['date'];
+    if (rawDate is Timestamp) {
+      return rawDate.toDate();
+    }
+    if (rawDate is DateTime) {
+      return rawDate;
+    }
+    return null;
   }
 }
+
+class _TransactionPoint {
+  const _TransactionPoint({
+    required this.date,
+    required this.pricePerToken,
+  });
+
+  final DateTime date;
+  final double pricePerToken;
+}
+
 
 class _StartupResumoCard extends StatelessWidget {
   const _StartupResumoCard({required this.startup});
