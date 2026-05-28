@@ -272,4 +272,147 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// Rota para retirar saldo
+router.post('/withdraw', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { amount } = req.body;
+
+    if (typeof amount !== 'number' || amount <= 0) {
+      res.status(400).json({ error: 'Invalid amount' });
+      return;
+    }
+
+    const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
+
+    await db.runTransaction(async (transaction) => {
+      const walletDoc = await transaction.get(walletRef);
+      if (!walletDoc.exists) throw new Error('Carteira não encontrada');
+
+      const data = walletDoc.data()!;
+      const currentBalance = parseCurrency(data.balance || 'R$ 0,00');
+
+      if (currentBalance < amount) {
+        throw new Error('Saldo insuficiente');
+      }
+
+      const newBalance = currentBalance - amount;
+      transaction.update(walletRef, { balance: formatCurrency(newBalance) });
+
+      const acqRef = db.collection('users').doc(user.uid).collection('acquisitions').doc();
+      transaction.set(acqRef, {
+        type: 'withdraw',
+        title: 'Retirada via TS Server',
+        amount: formatCurrency(amount),
+        date: new Date()
+      });
+    });
+
+    await sendNotification(user.uid, {
+      title: 'Retirada realizada',
+      body: `Você retirou ${formatCurrency(amount)} da sua carteira.`,
+      type: 'deposit',
+      data: { amount: amount.toString() },
+    });
+
+    res.status(200).json({ message: 'Funds withdrawn successfully' });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota para vender parte de um ativo
+router.post('/sellPartial', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { asset, quotasToSell } = req.body;
+
+    if (!asset || !asset.id || typeof quotasToSell !== 'number' || quotasToSell <= 0) {
+      res.status(400).json({ error: 'Invalid input data' });
+      return;
+    }
+
+    const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
+    const assetRef = db.collection('users').doc(user.uid).collection('assets').doc(asset.id);
+
+    let soldAssetName = '';
+    let soldAll = false;
+    let saleValue = 0;
+    let prefix = '';
+    let remainingQuotas = 0;
+
+    await db.runTransaction(async (transaction) => {
+      const walletDoc = await transaction.get(walletRef);
+      const assetDoc = await transaction.get(assetRef);
+
+      if (!walletDoc.exists) throw new Error('Carteira não encontrada');
+      if (!assetDoc.exists) throw new Error('Ativo não encontrado');
+
+      const walletData = walletDoc.data()!;
+      const currentBalance = parseCurrency(walletData.balance || 'R$ 0,00');
+
+      const assetData = assetDoc.data()!;
+      const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');
+      const amountStr = assetData.amount?.toString() || '0 Cotas';
+      const parts = amountStr.split(' ');
+      const quotasStr = parts[0] || '0';
+      prefix = parts.length === 2 ? ` ${parts[1]}` : ' Cotas';
+      const currentQuotas = parseFloat(quotasStr.replace(',', '.')) || 0.0;
+      soldAssetName = assetData.name?.toString() || '';
+
+      if (currentQuotas <= 0) throw new Error('Ativo sem cotas disponíveis');
+      if (quotasToSell > currentQuotas + 1e-9) {
+        throw new Error('Quantidade maior do que as cotas disponíveis');
+      }
+
+      const ratio = quotasToSell / currentQuotas;
+      saleValue = currentAssetValue * ratio;
+      const newBalance = currentBalance + saleValue;
+      transaction.update(walletRef, { balance: formatCurrency(newBalance) });
+
+      remainingQuotas = currentQuotas - quotasToSell;
+      if (remainingQuotas <= 1e-6) {
+        transaction.delete(assetRef);
+        soldAll = true;
+      } else {
+        const newValue = currentAssetValue - saleValue;
+        transaction.update(assetRef, {
+          value: formatCurrency(newValue > 0 ? newValue : 0),
+          amount: `${remainingQuotas.toFixed(1).replace('.', ',')}${prefix}`,
+        });
+      }
+
+      const acqRef = db.collection('users').doc(user.uid).collection('acquisitions').doc();
+      transaction.set(acqRef, {
+        type: 'sell',
+        title: `Venda: ${assetData.name}`,
+        amount: formatCurrency(saleValue),
+        quotas: `${quotasToSell.toFixed(1).replace('.', ',')}${prefix}`,
+        date: new Date(),
+      });
+    });
+
+    if (soldAll && soldAssetName) {
+      try {
+        await removeUserPrivateQuestions(soldAssetName, user.uid);
+      } catch (cleanupErr) {
+        console.error('Falha ao limpar perguntas privadas após venda parcial:', cleanupErr);
+      }
+    }
+
+    await sendNotification(user.uid, {
+      title: 'Venda parcial realizada',
+      body: `Você vendeu ${quotasToSell.toFixed(1).replace('.', ',')}${prefix} de ${asset.name || 'startup'} por ${formatCurrency(saleValue)}.`,
+      type: 'sell',
+      data: { assetId: asset.id, quotasSold: quotasToSell.toString() },
+    });
+
+    res.status(200).json({ message: 'Asset partially sold successfully', soldAll });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
