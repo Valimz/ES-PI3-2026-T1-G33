@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/features/wallet/presentation/pages/transaction_details_page.dart';
 import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
@@ -33,16 +34,13 @@ class _WalletPageState extends State<WalletPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Carteira',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: AppColors.primary,
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
-          onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           IconButton(
@@ -73,6 +71,7 @@ class _WalletPageState extends State<WalletPage> {
           const SizedBox(height: 32),
         ],
       ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
     );
   }
 
@@ -364,7 +363,7 @@ class _WalletPageState extends State<WalletPage> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(context, '/explore');
+                        Navigator.pushReplacementNamed(context, '/explore');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,

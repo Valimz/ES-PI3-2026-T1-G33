@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:mescla_invest/core/config/app_config.dart';
 
 /// Handler de background — deve ser top-level function
 @pragma('vm:entry-point')
@@ -26,7 +27,7 @@ class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
+  final String _baseUrl = AppConfig.apiBaseUrl;
 
   bool _initialized = false;
 

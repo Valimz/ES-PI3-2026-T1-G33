@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 
@@ -34,10 +35,7 @@ class _P2PPageState extends State<P2PPage> {
               Tab(text: "Minhas Ofertas"),
             ],
           ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          automaticallyImplyLeading: false,
         ),
         body: const TabBarView(
           children: [
@@ -53,6 +51,7 @@ class _P2PPageState extends State<P2PPage> {
               style: TextStyle(
                   color: AppColors.primary, fontWeight: FontWeight.bold)),
         ),
+        bottomNavigationBar: const AppBottomNav(currentIndex: 4),
       ),
     );
   }
