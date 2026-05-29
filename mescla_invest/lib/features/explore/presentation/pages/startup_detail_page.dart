@@ -596,7 +596,7 @@ class _UserPositionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cotasStr = _formatQuotas(quotas);
-    final cotasLabel = quotas == 1.0 ? 'cota' : 'cotas';
+    final cotasLabel = quotas == 1.0 ? 'token' : 'tokens';
 
     return _Card(
       child: Row(

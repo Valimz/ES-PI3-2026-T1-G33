@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
-import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -96,7 +95,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeaderWallet(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
       decoration: const BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.only(
@@ -121,42 +121,9 @@ class _HomePageState extends State<HomePage> {
                       color: Colors.white,
                       fontSize: 32,
                       fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _buildQuickAction(Icons.add_circle_outline, "Adicionar",
-                      onTap: () => _showAddFundsBottomSheet(context)),
-                  const SizedBox(width: 12),
-                  _buildQuickAction(Icons.swap_horiz, "Negociar",
-                      onTap: () => _showNegotiateBottomSheet(context)),
-                ],
-              ),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildQuickAction(IconData icon, String label,
-      {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.accent, size: 20),
-            const SizedBox(width: 8),
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
-          ],
-        ),
       ),
     );
   }
@@ -420,229 +387,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showAddFundsBottomSheet(BuildContext context) {
-    final TextEditingController amountController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("Adicionar Fundos",
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: "Valor (R\$)",
-                  prefixIcon: const Icon(Icons.attach_money),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () async {
-                    final value = double.tryParse(
-                        amountController.text.replaceAll(',', '.'));
-                    if (value != null && value > 0) {
-                      try {
-                        await BackendService().addFunds(value);
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text("Fundos adicionados com sucesso!")));
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Erro: $e")));
-                        }
-                      }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text("Insira um valor válido")));
-                    }
-                  },
-                  child: const Text("Confirmar",
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showNegotiateBottomSheet(BuildContext context) {
-    String? selectedStartupId;
-    Map<String, dynamic>? selectedStartupDetails;
-    final TextEditingController amountController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Negociar Startups",
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary)),
-                  const SizedBox(height: 16),
-                  StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: FirestoreService().getStartups(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const CircularProgressIndicator();
-                      }
-                      final startups = snapshot.data!;
-
-                      return DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: 'Selecione a Startup',
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        initialValue: selectedStartupId,
-                        items: startups.map((startup) {
-                          final id = startup['id']?.toString() ??
-                              startup['name'] as String;
-                          return DropdownMenuItem<String>(
-                            value: id,
-                            child:
-                                Text("${startup['name']} (${startup['val']})"),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedStartupId = value;
-                            if (value != null) {
-                              selectedStartupDetails = startups.firstWhere(
-                                (s) =>
-                                    (s['id']?.toString() ?? s['name']) ==
-                                    value,
-                              );
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: amountController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: "Valor a investir (R\$)",
-                      prefixIcon: const Icon(Icons.monetization_on),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () async {
-                        final value = double.tryParse(
-                            amountController.text.replaceAll(',', '.'));
-                        if (selectedStartupDetails != null &&
-                            value != null &&
-                            value > 0) {
-                          try {
-                            await BackendService().negotiateAsset(
-                                selectedStartupDetails!, value);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Investimento realizado com sucesso!")));
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Erro: $e")));
-                            }
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text(
-                                      "Selecione uma startup e insira um valor válido")));
-                        }
-                      },
-                      child: const Text("Confirmar Investimento",
-                          style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 }
