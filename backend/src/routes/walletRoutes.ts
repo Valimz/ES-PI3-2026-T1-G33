@@ -161,7 +161,7 @@ router.post('/buy', requireAuth, async (req: Request, res: Response) => {
         const currentQuotas = parseFloat(quotasStr.replace(',', '.')) || 0.0;
 
         const newQuotas = currentQuotas + quotasToBuy;
-        const existingPrefix = assetData.amount?.toString().split(' ').length === 2 ? ` ${assetData.amount.toString().split(' ')[1]}` : ' Cotas';
+        const existingPrefix = assetData.amount?.toString().split(' ').length === 2 ? ` ${assetData.amount.toString().split(' ')[1]}` : ' Tokens';
 
         transaction.update(existingAssetRef, {
           value: formatCurrency(currentAssetValue + amountToBuy),
@@ -230,7 +230,7 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
 
       const assetData = assetDoc.data()!;
       const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');
-      const quotasStr = assetData.amount?.toString() || '0 Cotas';
+      const quotasStr = assetData.amount?.toString() || '0 Tokens';
       soldAssetName = assetData.name?.toString() || '';
 
       const newBalance = currentBalance + currentAssetValue;
@@ -354,16 +354,16 @@ router.post('/sellPartial', requireAuth, async (req: Request, res: Response) => 
 
       const assetData = assetDoc.data()!;
       const currentAssetValue = parseCurrency(assetData.value || 'R$ 0,00');
-      const amountStr = assetData.amount?.toString() || '0 Cotas';
+      const amountStr = assetData.amount?.toString() || '0 Tokens';
       const parts = amountStr.split(' ');
       const quotasStr = parts[0] || '0';
-      prefix = parts.length === 2 ? ` ${parts[1]}` : ' Cotas';
+      prefix = parts.length === 2 ? ` ${parts[1]}` : ' Tokens';
       const currentQuotas = parseFloat(quotasStr.replace(',', '.')) || 0.0;
       soldAssetName = assetData.name?.toString() || '';
 
-      if (currentQuotas <= 0) throw new Error('Ativo sem cotas disponíveis');
+      if (currentQuotas <= 0) throw new Error('Ativo sem tokens disponíveis');
       if (quotasToSell > currentQuotas + 1e-9) {
-        throw new Error('Quantidade maior do que as cotas disponíveis');
+        throw new Error('Quantidade maior do que os tokens disponíveis');
       }
 
       const ratio = quotasToSell / currentQuotas;

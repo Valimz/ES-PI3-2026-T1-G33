@@ -85,7 +85,7 @@ class TransactionDetailsPage extends StatelessWidget {
                   _buildDetailRow("Descrição", title),
                   if (isBuy && quotas != null) ...[
                     const Divider(height: 32),
-                    _buildDetailRow("Ativos (Cotas)", quotas),
+                    _buildDetailRow("Ativos (Tokens)", quotas),
                   ],
                   const Divider(height: 32),
                   _buildDetailRow("Data", dateFormatted),

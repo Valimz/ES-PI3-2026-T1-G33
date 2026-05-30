@@ -103,7 +103,7 @@ void showStartupDetailsDialog(
                 child: Column(
                   children: [
                     _buildInfoRow(
-                        Icons.monetization_on_outlined, 'Valor da Cota', val),
+                        Icons.monetization_on_outlined, 'Valor do Token', val),
                     const Divider(height: 20),
                     _buildInfoRow(Icons.flag_outlined, 'Estágio', stage),
                   ],

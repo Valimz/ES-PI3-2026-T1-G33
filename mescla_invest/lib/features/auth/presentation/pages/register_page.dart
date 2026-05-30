@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/auth/presentation/pages/login_page.dart';
 import 'package:mescla_invest/services/firebase_auth_service.dart';
@@ -126,6 +127,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextFormField(
                   controller: _cpfController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                  ],
                   decoration: const InputDecoration(
                     hintText: "000.000.000-00",
                     prefixIcon: Icon(Icons.badge_outlined, size: 20),
@@ -134,11 +139,15 @@ class _RegisterPageState extends State<RegisterPage> {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, insira seu CPF';
                     }
+                    final digits = value.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length != 11) {
+                      return 'O CPF deve conter 11 dígitos';
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
-                _buildFieldLabel("Telefone (Opcional)"),
+                _buildFieldLabel("Telefone"),
                 TextFormField(
                   controller: _telefoneController,
                   keyboardType: TextInputType.phone,
@@ -146,6 +155,12 @@ class _RegisterPageState extends State<RegisterPage> {
                     hintText: "(11) 99999-9999",
                     prefixIcon: Icon(Icons.phone_outlined, size: 20),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira seu telefone';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 40),
                 ElevatedButton(

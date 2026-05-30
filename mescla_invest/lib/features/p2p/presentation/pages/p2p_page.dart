@@ -264,7 +264,7 @@ class _MarketTab extends StatelessWidget {
                                       fontWeight: FontWeight.bold,
                                       fontSize: 18,
                                       color: AppColors.primary)),
-                              Text('${offer['quotas']} Cotas',
+                              Text('${offer['quotas']} Tokens',
                                   style: const TextStyle(
                                       fontSize: 14, color: Colors.grey)),
                             ],
@@ -436,7 +436,7 @@ class _MyOffersTab extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                            "${offer['startupName']} - ${offer['quotas']} Cotas",
+                            "${offer['startupName']} - ${offer['quotas']} Tokens",
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16)),
