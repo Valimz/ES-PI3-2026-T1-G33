@@ -57,6 +57,51 @@ const removeUserPrivateQuestions = async (startupName: string, userId: string) =
   });
 };
 
+// Cancela ofertas P2P ativas do usuário cuja quantidade de tokens ofertados
+// não pode mais ser coberta pela posição restante após uma venda.
+// Retorna a quantidade de ofertas canceladas.
+const cancelOverCommittedP2POffers = async (
+  startupName: string,
+  userId: string,
+  remainingQuotas: number
+): Promise<number> => {
+  if (!startupName) return 0;
+
+  const offersSnap = await db
+    .collection('p2p_offers')
+    .where('sellerId', '==', userId)
+    .where('startupName', '==', startupName)
+    .where('status', '==', 'active')
+    .get();
+
+  if (offersSnap.empty) return 0;
+
+  // Mantém as ofertas mais antigas enquanto houver posição suficiente,
+  // cancelando as que excederem o saldo de tokens restante.
+  const sorted = offersSnap.docs.sort((a, b) => {
+    const ta = a.data().createdAt?.toMillis?.() ?? 0;
+    const tb = b.data().createdAt?.toMillis?.() ?? 0;
+    return ta - tb;
+  });
+
+  let budget = remainingQuotas;
+  const batch = db.batch();
+  let cancelled = 0;
+
+  for (const doc of sorted) {
+    const offered = Number(doc.data().quotas) || 0;
+    if (offered <= budget + 1e-6) {
+      budget -= offered;
+    } else {
+      batch.update(doc.ref, { status: 'cancelled' });
+      cancelled++;
+    }
+  }
+
+  if (cancelled > 0) await batch.commit();
+  return cancelled;
+};
+
 // Rota de Depositar
 router.post('/addFunds', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -258,12 +303,30 @@ router.post('/sell', requireAuth, async (req: Request, res: Response) => {
       }
     }
 
+    // Cancela ofertas P2P ativas desse ativo (não há mais posição para cobri-las)
+    let cancelledOffers = 0;
+    try {
+      cancelledOffers = await cancelOverCommittedP2POffers(
+        soldAssetName || asset.name, user.uid, 0);
+    } catch (offerErr) {
+      console.error('Falha ao cancelar ofertas P2P após venda:', offerErr);
+    }
+
     await sendNotification(user.uid, {
       title: 'Venda realizada',
       body: `Você vendeu seus ativos de ${asset.name || 'startup'}.`,
       type: 'sell',
       data: { assetId: asset.id },
     });
+
+    if (cancelledOffers > 0) {
+      await sendNotification(user.uid, {
+        title: 'Oferta P2P retirada',
+        body: `Sua oferta de ${asset.name || 'startup'} foi retirada do mercado por falta de tokens disponíveis.`,
+        type: 'p2p_offer',
+        data: { startupName: asset.name || '' },
+      });
+    }
 
     res.status(200).json({ message: 'Asset sold successfully' });
   } catch (error: any) {
@@ -401,12 +464,30 @@ router.post('/sellPartial', requireAuth, async (req: Request, res: Response) => 
       }
     }
 
+    // Cancela ofertas P2P que excedem a posição restante após a venda parcial
+    let cancelledOffers = 0;
+    try {
+      cancelledOffers = await cancelOverCommittedP2POffers(
+        soldAssetName || asset.name, user.uid, soldAll ? 0 : remainingQuotas);
+    } catch (offerErr) {
+      console.error('Falha ao cancelar ofertas P2P após venda parcial:', offerErr);
+    }
+
     await sendNotification(user.uid, {
       title: 'Venda parcial realizada',
       body: `Você vendeu ${quotasToSell.toFixed(1).replace('.', ',')}${prefix} de ${asset.name || 'startup'} por ${formatCurrency(saleValue)}.`,
       type: 'sell',
       data: { assetId: asset.id, quotasSold: quotasToSell.toString() },
     });
+
+    if (cancelledOffers > 0) {
+      await sendNotification(user.uid, {
+        title: 'Oferta P2P retirada',
+        body: `Sua oferta de ${asset.name || 'startup'} foi retirada do mercado por falta de tokens disponíveis.`,
+        type: 'p2p_offer',
+        data: { startupName: asset.name || '' },
+      });
+    }
 
     res.status(200).json({ message: 'Asset partially sold successfully', soldAll });
   } catch (error: any) {
