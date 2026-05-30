@@ -383,6 +383,75 @@ class FirestoreService {
         q['createdAt'] == original['createdAt'];
   }
 
+  Future<void> addPublicQuestion(String startupId, String pergunta) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    if (pergunta.trim().isEmpty) throw Exception("A pergunta não pode ser vazia");
+
+    final startupRef = _db.collection('startups').doc(startupId);
+    final newId = DateTime.now().microsecondsSinceEpoch.toString();
+    await startupRef.update({
+      'faq': FieldValue.arrayUnion([
+        {
+          'id': newId,
+          'pergunta': pergunta.trim(),
+          'resposta': '',
+          'publico': true,
+          'askerId': user.uid,
+          'createdAt': DateTime.now().toIso8601String(),
+        }
+      ]),
+    });
+  }
+
+  Future<void> ensureDefaultPublicQuestions(
+      String startupId, String startupName) async {
+    if (startupId.isEmpty) return;
+    final defaults = _defaultPublicFaqByName[startupName];
+    if (defaults == null || defaults.isEmpty) return;
+
+    final ref = _db.collection('startups').doc(startupId);
+    final snap = await ref.get();
+    if (!snap.exists) return;
+
+    final data = snap.data() ?? <String, dynamic>{};
+    final rawFaq = data['faq'];
+    final existing = rawFaq is List
+        ? rawFaq
+            .whereType<Map>()
+            .map((m) => Map<String, dynamic>.from(m))
+            .toList()
+        : <Map<String, dynamic>>[];
+    final existingIds = existing.map((q) => q['id']).toSet();
+    final missing =
+        defaults.where((q) => !existingIds.contains(q['id'])).toList();
+    if (missing.isEmpty) return;
+
+    await ref.update({'faq': FieldValue.arrayUnion(missing)});
+  }
+
+  Stream<List<Map<String, dynamic>>> getPublicQuestions(String startupId) {
+    return _db.collection('startups').doc(startupId).snapshots().map((snap) {
+      final data = snap.data();
+      if (data == null) return <Map<String, dynamic>>[];
+      final faq = data['faq'];
+      if (faq is! List) return <Map<String, dynamic>>[];
+      final publicas = faq
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .where((q) => q['publico'] == true)
+          .toList();
+      publicas.sort((a, b) {
+        final aOficial = a['askerId'] == null;
+        final bOficial = b['askerId'] == null;
+        if (aOficial != bOficial) return aOficial ? -1 : 1;
+        return (a['createdAt']?.toString() ?? '')
+            .compareTo(b['createdAt']?.toString() ?? '');
+      });
+      return publicas;
+    }).asBroadcastStream();
+  }
+
   // --- MÉTODOS P2P ---
   Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
     final user = _auth.currentUser;
@@ -575,7 +644,12 @@ class FirestoreService {
 
     if (query.docs.isEmpty) {
       for (var startup in _initialStartupsSeed) {
-        await startupsCollection.add(startup);
+        final withFaq = {
+          ...startup,
+          'faq': _defaultPublicFaqByName[startup['name']] ??
+              const <Map<String, dynamic>>[],
+        };
+        await startupsCollection.add(withFaq);
       }
       debugPrint("Startups semeadas com sucesso!");
     } else {
@@ -614,6 +688,26 @@ class FirestoreService {
         }
       }
 
+      final defaultFaq =
+          _defaultPublicFaqByName[data['name']?.toString()] ??
+              const <Map<String, dynamic>>[];
+      if (defaultFaq.isNotEmpty) {
+        final rawFaq = data['faq'];
+        final existingFaq = rawFaq is List
+            ? rawFaq
+                .whereType<Map>()
+                .map((m) => Map<String, dynamic>.from(m))
+                .toList()
+            : <Map<String, dynamic>>[];
+        final existingIds = existingFaq.map((q) => q['id']).toSet();
+        final missing = defaultFaq
+            .where((q) => !existingIds.contains(q['id']))
+            .toList();
+        if (missing.isNotEmpty) {
+          patch['faq'] = [...missing, ...existingFaq];
+        }
+      }
+
       if (patch.isNotEmpty) {
         await doc.reference.update(patch);
         updated++;
@@ -640,6 +734,90 @@ class FirestoreService {
       'faq': seeded['faq'] ?? <Map<String, dynamic>>[],
     };
   }
+
+  // Perguntas públicas predefinidas exibidas no FAQ de cada startup.
+  static const Map<String, List<Map<String, dynamic>>> _defaultPublicFaqByName = {
+    "EcoTech": [
+      {
+        "id": "default-ecotech-1",
+        "pergunta": "Como a EcoTech gera receita?",
+        "resposta":
+            "Por meio de assinaturas mensais das empresas que utilizam a plataforma de monitoramento ambiental.",
+        "publico": true,
+      },
+      {
+        "id": "default-ecotech-2",
+        "pergunta": "Qual é o principal diferencial da startup?",
+        "resposta":
+            "Sensores próprios integrados a um painel de analytics em tempo real para conformidade ambiental.",
+        "publico": true,
+      },
+    ],
+    "FinFlow": [
+      {
+        "id": "default-finflow-1",
+        "pergunta": "Para quem é o produto da FinFlow?",
+        "resposta":
+            "Para MEIs e pequenos negócios que precisam de gestão simples e automatizada de fluxo de caixa.",
+        "publico": true,
+      },
+      {
+        "id": "default-finflow-2",
+        "pergunta": "Como é feita a cobrança aos clientes?",
+        "resposta":
+            "Plano mensal por assinatura, com diferentes faixas conforme o volume de transações.",
+        "publico": true,
+      },
+    ],
+    "AgroSmart": [
+      {
+        "id": "default-agrosmart-1",
+        "pergunta": "O que a solução da AgroSmart resolve?",
+        "resposta":
+            "Otimiza a irrigação no campo usando sensores IoT, reduzindo o desperdício de água e custos.",
+        "publico": true,
+      },
+      {
+        "id": "default-agrosmart-2",
+        "pergunta": "Em que estágio a startup está?",
+        "resposta":
+            "Em fase inicial (Nova), validando a tecnologia com produtores parceiros.",
+        "publico": true,
+      },
+    ],
+    "HealthVibe": [
+      {
+        "id": "default-healthvibe-1",
+        "pergunta": "Como a IA é utilizada na HealthVibe?",
+        "resposta":
+            "Para triagem inicial dos pacientes em atendimentos de telemedicina, agilizando o encaminhamento.",
+        "publico": true,
+      },
+      {
+        "id": "default-healthvibe-2",
+        "pergunta": "A plataforma substitui o médico?",
+        "resposta":
+            "Não. A IA apoia a triagem, mas o atendimento e o diagnóstico são sempre realizados por profissionais.",
+        "publico": true,
+      },
+    ],
+    "EduNext": [
+      {
+        "id": "default-edunext-1",
+        "pergunta": "O que torna os cursos da EduNext diferentes?",
+        "resposta":
+            "A gamificação do aprendizado, com trilhas, recompensas e acompanhamento de progresso.",
+        "publico": true,
+      },
+      {
+        "id": "default-edunext-2",
+        "pergunta": "Qual é o modelo de negócio?",
+        "resposta":
+            "Assinaturas de acesso às trilhas de cursos, com planos para alunos e para empresas.",
+        "publico": true,
+      },
+    ],
+  };
 
   static const List<Map<String, dynamic>> _initialStartupsSeed = [
     {

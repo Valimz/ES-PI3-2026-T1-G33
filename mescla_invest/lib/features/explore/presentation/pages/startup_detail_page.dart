@@ -87,7 +87,7 @@ class StartupDetailPage extends StatelessWidget {
                 VideoCard(videoUrl: data['videoUrl']?.toString()),
                 if ((data['videoUrl']?.toString() ?? '').isNotEmpty)
                   const SizedBox(height: 16),
-                FaqPublicoWidget(faq: _parseListOfMaps(data['faq'])),
+                FaqPublicoWidget(startupId: startupId, startupName: name),
                 if (isInvestor && startupId.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _PrivateQuestionForm(startupId: startupId),

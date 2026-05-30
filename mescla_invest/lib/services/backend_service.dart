@@ -238,6 +238,53 @@ class BackendService {
     }
   }
 
+  Future<void> editP2POffer(String offerId, double price) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/p2p/editOffer'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'offerId': offerId,
+        'price': price,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao editar oferta");
+    }
+  }
+
+  Future<void> cancelP2POffer(String offerId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/p2p/cancelOffer'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'offerId': offerId,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao retirar oferta");
+    }
+  }
+
   Future<void> acceptP2POffer(String offerId, {double? acceptedPrice, String? buyerIdParam, String? negotiationId}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("Usuário não logado");

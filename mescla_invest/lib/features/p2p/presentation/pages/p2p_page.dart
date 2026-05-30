@@ -12,47 +12,71 @@ class P2PPage extends StatefulWidget {
   State<P2PPage> createState() => _P2PPageState();
 }
 
-class _P2PPageState extends State<P2PPage> {
+class _P2PPageState extends State<P2PPage>
+    with SingleTickerProviderStateMixin {
   final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabChange);
+  }
+
+  void _handleTabChange() {
+    // Atualiza a visibilidade do FAB ao alternar entre as abas.
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.primary,
-          elevation: 0,
-          title: const Text('Mercado P2P',
-              style: TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold)),
-          bottom: const TabBar(
-            indicatorColor: AppColors.accent,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.grey,
-            tabs: [
-              Tab(text: "Ofertas"),
-              Tab(text: "Minhas Ofertas"),
-            ],
-          ),
-          automaticallyImplyLeading: false,
-        ),
-        body: const TabBarView(
-          children: [
-            _MarketTab(),
-            _MyOffersTab(),
+    final isMyOffers = _tabController.index == 1;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        title: const Text('Mercado P2P',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.accent,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.grey,
+          tabs: const [
+            Tab(text: "Ofertas"),
+            Tab(text: "Minhas Ofertas"),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showCreateOfferBottomSheet(context),
-          backgroundColor: AppColors.accent,
-          icon: const Icon(Icons.add, color: AppColors.primary),
-          label: const Text('Anunciar',
-              style: TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.bold)),
-        ),
-        bottomNavigationBar: const AppBottomNav(currentIndex: 4),
+        automaticallyImplyLeading: false,
       ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _MarketTab(),
+          _MyOffersTab(),
+        ],
+      ),
+      floatingActionButton: isMyOffers
+          ? FloatingActionButton.extended(
+              onPressed: () => _showCreateOfferBottomSheet(context),
+              backgroundColor: AppColors.accent,
+              icon: const Icon(Icons.add, color: AppColors.primary),
+              label: const Text('Anunciar',
+                  style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold)),
+            )
+          : null,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 4),
     );
   }
 
@@ -398,6 +422,93 @@ class _MarketTab extends StatelessWidget {
 class _MyOffersTab extends StatelessWidget {
   const _MyOffersTab();
 
+  void _showEditOfferDialog(
+      BuildContext context, Map<String, dynamic> offer) {
+    final currentPrice = (offer['price'] as num?)?.toDouble() ?? 0.0;
+    final controller = TextEditingController(
+        text: currentPrice.toStringAsFixed(2).replaceAll('.', ','));
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Editar preço da oferta'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Novo preço (R\$)'),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () async {
+                final price =
+                    double.tryParse(controller.text.replaceAll(',', '.'));
+                if (price == null || price <= 0) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                          content: Text('Insira um preço válido')));
+                  return;
+                }
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+                try {
+                  await BackendService().editP2POffer(offer['id'], price);
+                  messenger.showSnackBar(const SnackBar(
+                      content: Text('Oferta atualizada com sucesso!')));
+                } catch (e) {
+                  messenger.showSnackBar(
+                      SnackBar(content: Text('Erro: $e')));
+                }
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmCancelOffer(
+      BuildContext context, Map<String, dynamic> offer) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Retirar oferta?'),
+          content: Text(
+              'A oferta de ${offer['startupName']} será removida do mercado.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Retirar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+    try {
+      await BackendService().cancelP2POffer(offer['id']);
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Oferta retirada do mercado.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Map<String, dynamic>>>(
@@ -433,18 +544,50 @@ class _MyOffersTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                            "${offer['startupName']} - ${offer['quotas']} Tokens",
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16)),
+                        Expanded(
+                          child: Text(
+                              "${offer['startupName']} - ${offer['quotas']} Tokens",
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                        ),
+                        const SizedBox(width: 8),
                         Text(
                             'R\$ ${offer['price']?.toStringAsFixed(2).replaceAll('.', ',')}',
                             style: const TextStyle(
                                 color: AppColors.accent,
                                 fontWeight: FontWeight.bold)),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert,
+                              color: AppColors.primary),
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _showEditOfferDialog(context, offer);
+                            } else if (value == 'cancel') {
+                              _confirmCancelOffer(context, offer);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem<String>(
+                              value: 'edit',
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.edit_outlined),
+                                title: Text('Editar preço'),
+                              ),
+                            ),
+                            PopupMenuItem<String>(
+                              value: 'cancel',
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Icon(Icons.delete_outline,
+                                    color: Colors.redAccent),
+                                title: Text('Retirar oferta'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                     const Divider(),
