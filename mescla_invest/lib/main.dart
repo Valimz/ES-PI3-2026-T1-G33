@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/app.dart';
 import 'package:mescla_invest/services/notification_service.dart';
@@ -12,6 +15,8 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
+    await _configureLocalEmulators();
+
     // Registrar handler de notificações em background
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -21,4 +26,27 @@ void main() async {
     debugPrint('Log: Firebase precisa ser configurado no Console. $e');
   }
   runApp(const InvestApp());
+}
+
+Future<void> _configureLocalEmulators() async {
+  if (!kDebugMode) {
+    return;
+  }
+
+  final emulatorHost = _firebaseEmulatorHost();
+  FirebaseAuth.instance.useAuthEmulator(emulatorHost, 9099);
+  FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 8080);
+}
+
+String _firebaseEmulatorHost() {
+  if (kIsWeb) {
+    return 'localhost';
+  }
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return '10.0.2.2';
+    default:
+      return 'localhost';
+  }
 }
