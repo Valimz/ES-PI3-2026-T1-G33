@@ -163,7 +163,7 @@ class FirestoreService {
         final newQuotas = currentQuotas + (amountToBuy / (startupPrice > 0 ? startupPrice : 1));
         
         // Define o prefixo correto da quota
-        String prefix = assetData['amount']?.toString().split(' ').length == 2 ? " ${assetData['amount']?.toString().split(' ').last}" : " Cotas";
+        String prefix = assetData['amount']?.toString().split(' ').length == 2 ? " ${assetData['amount']?.toString().split(' ').last}" : " Tokens";
 
         transaction.update(assetRef, {
           'value': _currencyFormat.format(currentAssetValue + amountToBuy),
@@ -183,7 +183,7 @@ class FirestoreService {
         });
       }
 
-      // Calcula as cotas para o histórico
+      // Calcula os tokens para o histórico
       final startupPrice = parseCurrency(startup['val'] ?? 'R\$ 1,00');
       final boughtQuotas = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
       final quotasPrefix = " ${startup['name'].toString().substring(0, 2).toUpperCase()}";
@@ -220,7 +220,7 @@ class FirestoreService {
       
       final assetData = assetDoc.data()!;
       final currentAssetValue = parseCurrency(assetData['value'] ?? 'R\$ 0,00');
-      final quotasStr = assetData['amount']?.toString() ?? '0 Cotas';
+      final quotasStr = assetData['amount']?.toString() ?? '0 Tokens';
       
       // Adiciona o valor total do ativo de volta à carteira
       final newBalance = currentBalance + currentAssetValue;
@@ -390,7 +390,7 @@ class FirestoreService {
 
     final quotasStr = asset['amount']?.toString().split(' ').first ?? '0';
     final quotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
-    if (quotas <= 0) throw Exception("Cotas insuficientes");
+    if (quotas <= 0) throw Exception("Tokens insuficientes");
 
     await _db.collection('p2p_offers').add({
       'sellerId': user.uid,
@@ -512,8 +512,8 @@ class FirestoreService {
         if (sQuotas <= quotas) { // Se vendeu tudo ou de alguma forma passou do total
           transaction.delete(sDoc.reference);
         } else {
-          // Atualiza descontando as cotas. Prefix seria " AD" etc.
-          String prefix = sData['amount']?.toString().split(' ').length == 2 ? " ${sData['amount']?.toString().split(' ').last}" : " Cotas";
+          // Atualiza descontando os tokens. Prefix seria " AD" etc.
+          String prefix = sData['amount']?.toString().split(' ').length == 2 ? " ${sData['amount']?.toString().split(' ').last}" : " Tokens";
           // We need an approximate value deduction proportional to quotas
           final sValStr = sData['value']?.toString() ?? 'R\$ 0,00';
           final sVal = parseCurrency(sValStr);
@@ -533,7 +533,7 @@ class FirestoreService {
         final bData = bDoc.data();
         final bQuotasStr = bData['amount']?.toString().split(' ').first ?? '0';
         final bQuotas = double.tryParse(bQuotasStr.replaceAll(',', '.')) ?? 0.0;
-        String prefix = bData['amount']?.toString().split(' ').length == 2 ? " ${bData['amount']?.toString().split(' ').last}" : " Cotas";
+        String prefix = bData['amount']?.toString().split(' ').length == 2 ? " ${bData['amount']?.toString().split(' ').last}" : " Tokens";
         final bValStr = bData['value']?.toString() ?? 'R\$ 0,00';
         final bVal = parseCurrency(bValStr);
 

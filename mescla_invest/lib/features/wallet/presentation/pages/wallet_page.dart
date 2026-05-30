@@ -546,17 +546,17 @@ class _WalletPageState extends State<WalletPage> {
   }
 
   Future<void> _showPartialSellDialog(Map<String, dynamic> asset) async {
-    final amountStr = asset['amount']?.toString() ?? '0 Cotas';
+    final amountStr = asset['amount']?.toString() ?? '0 Tokens';
     final parts = amountStr.split(' ');
     final totalQuotas =
         double.tryParse((parts.first).replaceAll(',', '.')) ?? 0.0;
-    final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Cotas';
+    final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Tokens';
     final controller = TextEditingController();
     final messenger = ScaffoldMessenger.of(context);
 
     if (totalQuotas <= 0) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Nenhuma cota disponível para venda.')),
+        const SnackBar(content: Text('Nenhum token disponível para venda.')),
       );
       return;
     }
@@ -581,7 +581,7 @@ class _WalletPageState extends State<WalletPage> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Cotas a vender',
+                  labelText: 'Tokens a vender',
                   prefixIcon: const Icon(Icons.pie_chart_outline),
                   helperText: 'Máximo: ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')}',
                 ),

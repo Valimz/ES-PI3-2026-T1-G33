@@ -36,7 +36,7 @@ router.post('/createOffer', requireAuth, async (req: Request, res: Response) => 
 
     const quotasStr = asset.amount?.toString().split(' ')[0] || '0';
     const quotas = parseFloat(quotasStr.replace(',', '.')) || 0.0;
-    if (quotas <= 0) throw new Error("Cotas insuficientes");
+    if (quotas <= 0) throw new Error("Tokens insuficientes");
 
     await db.collection('p2p_offers').add({
       sellerId: user.uid,
@@ -173,7 +173,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
           if (sQuotas <= quotas) { 
             transaction.delete(sellerAssetRef);
           } else {
-            const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Cotas';
+            const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Tokens';
             const sVal = parseCurrency(sData.value?.toString() || 'R$ 0,00');
             const newVal = sVal - (sVal * (quotas/sQuotas));
             transaction.update(sellerAssetRef, {
@@ -191,7 +191,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
           const bData = bDoc.data()!;
           const bQuotasStr = bData.amount?.toString().split(' ')[0] || '0';
           const bQuotas = parseFloat(bQuotasStr.replace(',', '.')) || 0.0;
-          const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Cotas';
+          const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Tokens';
           const bVal = parseCurrency(bData.value?.toString() || 'R$ 0,00');
 
           transaction.update(buyerAssetRef, {

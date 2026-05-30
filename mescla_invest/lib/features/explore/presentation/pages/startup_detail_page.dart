@@ -304,7 +304,7 @@ class _HeaderSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                'Cota',
+                'Token',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textBody.withValues(alpha: 0.7),
@@ -595,8 +595,8 @@ class _UserPositionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cotasStr = _formatQuotas(quotas);
-    final cotasLabel = quotas == 1.0 ? 'token' : 'tokens';
+    final tokensStr = _formatQuotas(quotas);
+    final tokensLabel = quotas == 1.0 ? 'token' : 'tokens';
 
     return _Card(
       child: Row(
@@ -625,7 +625,7 @@ class _UserPositionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$cotasStr $cotasLabel',
+                  '$tokensStr $tokensLabel',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -998,7 +998,7 @@ Future<void> _confirmAndSellAll(
       return AlertDialog(
         title: const Text('Vender todos os tokens?'),
         content: Text(
-            'Você venderá todas as cotas de ${asset['name']}. Esta ação não pode ser desfeita.'),
+            'Você venderá todos os tokens de ${asset['name']}. Esta ação não pode ser desfeita.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -1031,17 +1031,17 @@ Future<void> _confirmAndSellAll(
 
 Future<void> _showPartialSellSheet(
     BuildContext context, Map<String, dynamic> asset) async {
-  final amountStr = asset['amount']?.toString() ?? '0 Cotas';
+  final amountStr = asset['amount']?.toString() ?? '0 Tokens';
   final parts = amountStr.split(' ');
   final totalQuotas =
       double.tryParse((parts.first).replaceAll(',', '.')) ?? 0.0;
-  final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Cotas';
+  final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Tokens';
   final controller = TextEditingController();
   final messenger = ScaffoldMessenger.of(context);
 
   if (totalQuotas <= 0) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('Nenhuma cota disponível para venda.')),
+      const SnackBar(content: Text('Nenhum token disponível para venda.')),
     );
     return;
   }
@@ -1066,7 +1066,7 @@ Future<void> _showPartialSellSheet(
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: 'Cotas a vender',
+                labelText: 'Tokens a vender',
                 prefixIcon: const Icon(Icons.pie_chart_outline),
                 helperText:
                     'Máximo: ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')}',
@@ -1152,7 +1152,7 @@ void _showInvestBottomSheet(
             ),
             const SizedBox(height: 4),
             Text(
-              'Cota atual: $val',
+              'Token atual: $val',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textBody.withValues(alpha: 0.7),

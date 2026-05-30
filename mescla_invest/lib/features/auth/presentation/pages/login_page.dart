@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/auth/presentation/pages/register_page.dart';
@@ -16,6 +17,10 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscureSenha = true;
+  bool _authFailed = false;
+
+  static const String _genericCredentialMsg =
+      'Email e/ou senha inválidos, tente novamente.';
 
   @override
   Widget build(BuildContext context) {
@@ -73,10 +78,15 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: Icon(Icons.email_outlined, size: 20),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira seu e-mail';
+                    if (value == null || value.isEmpty || _authFailed) {
+                      return _genericCredentialMsg;
                     }
                     return null;
+                  },
+                  onChanged: (_) {
+                    if (_authFailed) {
+                      setState(() => _authFailed = false);
+                    }
                   },
                 ),
 
@@ -101,10 +111,15 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira sua senha';
+                    if (value == null || value.isEmpty || _authFailed) {
+                      return _genericCredentialMsg;
                     }
                     return null;
+                  },
+                  onChanged: (_) {
+                    if (_authFailed) {
+                      setState(() => _authFailed = false);
+                    }
                   },
                 ),
 
@@ -128,6 +143,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 ElevatedButton(
                   onPressed: () async {
+                    setState(() => _authFailed = false);
                     if (_formKey.currentState!.validate()) {
                       try {
                         final authService = FirebaseAuthService();
@@ -141,14 +157,26 @@ class _LoginPageState extends State<LoginPage> {
                           MaterialPageRoute(
                               builder: (context) => const HomePage()),
                         );
-                      } catch (e) {
+                      } on FirebaseAuthException catch (e) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(e
-                                  .toString()
-                                  .replaceAll('Exception: ', ''))),
-                        );
+                        switch (e.code) {
+                          case 'wrong-password':
+                          case 'user-not-found':
+                          case 'invalid-email':
+                          case 'invalid-credential':
+                            // Credencial inválida: marca os dois campos.
+                            setState(() => _authFailed = true);
+                            _formKey.currentState!.validate();
+                            break;
+                          default:
+                            // Erro de rede/servidor: mostra SnackBar.
+                            _showErrorSnackBar(_messageForAuthCode(e));
+                        }
+                      } catch (e) {
+                        // Erros não relacionados à autenticação (ex.: Firestore).
+                        if (!context.mounted) return;
+                        _showErrorSnackBar(
+                            'Não foi possível entrar. Tente novamente.');
                       }
                     }
                   },
@@ -163,40 +191,6 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Text(
                     'Entrar',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Expanded(
-                        child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "OU",
-                        style:
-                            TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                      ),
-                    ),
-                    Expanded(
-                        child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.fingerprint),
-                  label: const Text("Entrar com Biometria"),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 56),
-                    side: const BorderSide(color: Color(0xFFE0E4EC)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    foregroundColor: AppColors.primary,
                   ),
                 ),
 
@@ -237,6 +231,25 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _messageForAuthCode(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'network-request-failed':
+        return 'Falha de conexão. Verifique sua internet e tente novamente.';
+      case 'too-many-requests':
+        return 'Muitas tentativas. Tente novamente mais tarde.';
+      case 'user-disabled':
+        return 'Esta conta foi desativada.';
+      default:
+        return 'Erro ao fazer login. Tente novamente.';
+    }
   }
 
   Widget _buildFieldLabel(String label) {
