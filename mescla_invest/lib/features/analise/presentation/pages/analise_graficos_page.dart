@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/analise/data/serie_valorizacao_data.dart';
 import 'package:mescla_invest/features/analise/models/periodo_analise.dart';
 import 'package:mescla_invest/features/analise/presentation/widgets/resumo_valorizacao_card.dart';
 import 'package:mescla_invest/features/analise/presentation/widgets/valorizacao_line_chart_card.dart';
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
+import 'package:mescla_invest/services/backend_service.dart';
+import 'package:mescla_invest/services/firestore_service.dart';
 
 class AnaliseGraficosPage extends StatefulWidget {
   const AnaliseGraficosPage({super.key});
@@ -95,10 +98,323 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
                 isPositiva: isPositiva,
                 titulo: 'Valorização de ${startup.nome}',
               ),
+              const SizedBox(height: 24),
+              Text('Ações', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _comprarMais,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Comprar mais'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _venderParte,
+                      icon: const Icon(Icons.pie_chart_outline),
+                      label: const Text('Vender parte'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _venderTudo,
+                      icon: const Icon(Icons.sell_outlined),
+                      label: const Text('Vender tudo'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // Busca o ativo do usuário (com o id do documento) pelo nome da startup.
+  Future<Map<String, dynamic>?> _buscarAtivo() async {
+    final assets = await FirestoreService().getUserAssets().first;
+    for (final a in assets) {
+      if (a['name'] == _startup?.nome) return a;
+    }
+    return null;
+  }
+
+  // Busca o documento da startup (para obter o preço atual 'val').
+  Future<Map<String, dynamic>?> _buscarStartup() async {
+    final startups = await FirestoreService().getStartups().first;
+    for (final s in startups) {
+      if (s['id'] == _startup?.id || s['name'] == _startup?.nome) return s;
+    }
+    return null;
+  }
+
+  Future<void> _venderTudo() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final asset = await _buscarAtivo();
+    if (!mounted) return;
+    if (asset == null || asset['id'] == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Ativo não encontrado na carteira.')));
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Vender todos os tokens?'),
+          content: Text(
+              'Você venderá todos os tokens de ${asset['name']}. Esta ação não pode ser desfeita.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Vender'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+    try {
+      await BackendService().sellAllAsset(asset);
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+          content: Text('Todos os tokens de ${asset['name']} vendidos!')));
+      Navigator.pop(context);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erro ao vender: $e')));
+    }
+  }
+
+  Future<void> _venderParte() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final asset = await _buscarAtivo();
+    if (!mounted) return;
+    if (asset == null || asset['id'] == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Ativo não encontrado na carteira.')));
+      return;
+    }
+
+    final amountStr = asset['amount']?.toString() ?? '0 Tokens';
+    final parts = amountStr.split(' ');
+    final totalQuotas =
+        double.tryParse((parts.first).replaceAll(',', '.')) ?? 0.0;
+    final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Tokens';
+
+    if (totalQuotas <= 0) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Nenhum token disponível para venda.')));
+      return;
+    }
+
+    final controller = TextEditingController();
+    final result = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Vender parte de ${asset['name']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Você possui ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')} $unitLabel',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Tokens a vender',
+                  prefixIcon: const Icon(Icons.pie_chart_outline),
+                  helperText:
+                      'Máximo: ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')}',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () {
+                final v =
+                    double.tryParse(controller.text.replaceAll(',', '.'));
+                if (v == null || v <= 0) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                          content: Text('Insira uma quantidade válida')));
+                  return;
+                }
+                if (v > totalQuotas + 1e-9) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                          content:
+                              Text('Quantidade maior do que o disponível')));
+                  return;
+                }
+                Navigator.pop(dialogContext, v);
+              },
+              child: const Text('Vender'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    try {
+      await BackendService().sellPartialAsset(asset, result);
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(
+          content: Text(
+              'Venda de ${result.toStringAsFixed(1).replaceAll('.', ',')} $unitLabel de ${asset['name']} realizada!')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erro ao vender: $e')));
+    }
+  }
+
+  Future<void> _comprarMais() async {
+    final startupDoc = await _buscarStartup();
+    if (!mounted) return;
+    final startupMap = startupDoc ??
+        {
+          'name': _startup?.nome,
+          'val':
+              'R\$ ${_startup?.posicao.valorAtual.toStringAsFixed(2).replaceAll('.', ',')}',
+        };
+    final val = startupMap['val']?.toString() ?? '—';
+    final controller = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Investir em ${startupMap['name']}',
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary),
+              ),
+              const SizedBox(height: 4),
+              Text('Token atual: $val',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textBody.withValues(alpha: 0.7))),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Valor a investir (R\$)',
+                  prefixIcon: const Icon(Icons.monetization_on),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    final value =
+                        double.tryParse(controller.text.replaceAll(',', '.'));
+                    if (value == null || value <= 0) {
+                      ScaffoldMessenger.of(sheetContext).showSnackBar(
+                          const SnackBar(
+                              content: Text('Insira um valor válido')));
+                      return;
+                    }
+                    try {
+                      await BackendService().negotiateAsset(startupMap, value);
+                      if (sheetContext.mounted) {
+                        Navigator.pop(sheetContext);
+                        ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Investimento realizado com sucesso!')));
+                      }
+                    } catch (e) {
+                      if (sheetContext.mounted) {
+                        ScaffoldMessenger.of(sheetContext).showSnackBar(
+                            SnackBar(content: Text('Erro: $e')));
+                      }
+                    }
+                  },
+                  child: const Text('Confirmar Investimento',
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
     );
   }
 }
