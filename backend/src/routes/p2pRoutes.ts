@@ -36,7 +36,7 @@ router.post('/createOffer', requireAuth, async (req: Request, res: Response) => 
 
     const quotasStr = asset.amount?.toString().split(' ')[0] || '0';
     const quotas = parseFloat(quotasStr.replace(',', '.')) || 0.0;
-    if (quotas <= 0) throw new Error("Cotas insuficientes");
+    if (quotas <= 0) throw new Error("Tokens insuficientes");
 
     await db.collection('p2p_offers').add({
       sellerId: user.uid,
@@ -173,7 +173,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
           if (sQuotas <= quotas) { 
             transaction.delete(sellerAssetRef);
           } else {
-            const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Cotas';
+            const prefix = sData.amount?.toString().split(' ').length === 2 ? ` ${sData.amount.toString().split(' ')[1]}` : ' Tokens';
             const sVal = parseCurrency(sData.value?.toString() || 'R$ 0,00');
             const newVal = sVal - (sVal * (quotas/sQuotas));
             transaction.update(sellerAssetRef, {
@@ -191,7 +191,7 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
           const bData = bDoc.data()!;
           const bQuotasStr = bData.amount?.toString().split(' ')[0] || '0';
           const bQuotas = parseFloat(bQuotasStr.replace(',', '.')) || 0.0;
-          const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Cotas';
+          const prefix = bData.amount?.toString().split(' ').length === 2 ? ` ${bData.amount.toString().split(' ')[1]}` : ' Tokens';
           const bVal = parseCurrency(bData.value?.toString() || 'R$ 0,00');
 
           transaction.update(buyerAssetRef, {
@@ -242,6 +242,76 @@ router.post('/acceptOffer', requireAuth, async (req: Request, res: Response) => 
     }
 
     res.status(200).json({ message: 'Offer accepted successfully' });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota para editar uma oferta P2P (apenas o preço)
+router.post('/editOffer', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { offerId, price } = req.body;
+
+    if (!offerId || typeof price !== 'number' || price <= 0) {
+      res.status(400).json({ error: 'Invalid input data' });
+      return;
+    }
+
+    const offerRef = db.collection('p2p_offers').doc(offerId);
+
+    await db.runTransaction(async (transaction) => {
+      const offerDoc = await transaction.get(offerRef);
+      if (!offerDoc.exists) throw new Error('Oferta não encontrada');
+
+      const offerData = offerDoc.data()!;
+      if (offerData.sellerId !== user.uid) {
+        throw new Error('Você não pode editar uma oferta que não é sua.');
+      }
+      if (offerData.status !== 'active') {
+        throw new Error('Esta oferta não está mais ativa.');
+      }
+
+      transaction.update(offerRef, { price });
+    });
+
+    res.status(200).json({ message: 'Offer updated successfully' });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota para retirar (cancelar) uma oferta P2P
+router.post('/cancelOffer', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { offerId } = req.body;
+
+    if (!offerId) {
+      res.status(400).json({ error: 'Invalid offerId' });
+      return;
+    }
+
+    const offerRef = db.collection('p2p_offers').doc(offerId);
+
+    await db.runTransaction(async (transaction) => {
+      const offerDoc = await transaction.get(offerRef);
+      if (!offerDoc.exists) throw new Error('Oferta não encontrada');
+
+      const offerData = offerDoc.data()!;
+      if (offerData.sellerId !== user.uid) {
+        throw new Error('Você não pode retirar uma oferta que não é sua.');
+      }
+      if (offerData.status !== 'active') {
+        throw new Error('Esta oferta não está mais ativa.');
+      }
+
+      transaction.update(offerRef, { status: 'cancelled' });
+    });
+
+    res.status(200).json({ message: 'Offer cancelled successfully' });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message });

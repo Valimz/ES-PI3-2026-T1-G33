@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/core/config/app_config.dart';
 
 class BackendService {
   static final BackendService _instance = BackendService._internal();
   factory BackendService() => _instance;
 
   IO.Socket? _socket;
-  final String _baseUrl = 'http://localhost:3000'; // Chrome Web
+  final String _baseUrl = AppConfig.apiBaseUrl;
 
   // Controladores de Stream locais para repassar os eventos do Socket
   final _walletStreamController = StreamController<Map<String, dynamic>?>.broadcast();
@@ -123,7 +124,7 @@ class BackendService {
     if (user == null) throw Exception("Usuário não logado");
 
     final token = await user.getIdToken();
-    
+
     final response = await http.post(
       Uri.parse('$_baseUrl/api/wallet/sell'),
       headers: {
@@ -138,6 +139,53 @@ class BackendService {
     if (response.statusCode != 200) {
       final errorMap = jsonDecode(response.body);
       throw Exception(errorMap['error'] ?? "Erro no servidor ao vender");
+    }
+  }
+
+  Future<void> sellPartialAsset(
+      Map<String, dynamic> asset, double quotasToSell) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/wallet/sellPartial'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'asset': asset,
+        'quotasToSell': quotasToSell,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(
+          errorMap['error'] ?? "Erro no servidor ao vender parcialmente");
+    }
+  }
+
+  Future<void> withdrawFunds(double amountToWithdraw) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/wallet/withdraw'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'amount': amountToWithdraw}),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao retirar");
     }
   }
 
@@ -187,6 +235,53 @@ class BackendService {
     if (response.statusCode != 200) {
       final errorMap = jsonDecode(response.body);
       throw Exception(errorMap['error'] ?? "Erro no servidor ao contrapropor");
+    }
+  }
+
+  Future<void> editP2POffer(String offerId, double price) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/p2p/editOffer'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'offerId': offerId,
+        'price': price,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao editar oferta");
+    }
+  }
+
+  Future<void> cancelP2POffer(String offerId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/p2p/cancelOffer'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'offerId': offerId,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro no servidor ao retirar oferta");
     }
   }
 

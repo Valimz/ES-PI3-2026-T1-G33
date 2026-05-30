@@ -182,7 +182,7 @@ class FirestoreService {
         final newQuotas = currentQuotas + (amountToBuy / (startupPrice > 0 ? startupPrice : 1));
         
         // Define o prefixo correto da quota
-        String prefix = assetData['amount']?.toString().split(' ').length == 2 ? " ${assetData['amount']?.toString().split(' ').last}" : " Cotas";
+        String prefix = assetData['amount']?.toString().split(' ').length == 2 ? " ${assetData['amount']?.toString().split(' ').last}" : " Tokens";
 
         transaction.update(assetRef, {
           'value': _currencyFormat.format(currentAssetValue + amountToBuy),
@@ -202,7 +202,7 @@ class FirestoreService {
         });
       }
 
-      // Calcula as cotas para o histórico
+      // Calcula os tokens para o histórico
       final startupPrice = parseCurrency(startup['val'] ?? 'R\$ 1,00');
       final boughtQuotas = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
       final quotasPrefix = " ${startup['name'].toString().substring(0, 2).toUpperCase()}";
@@ -241,7 +241,7 @@ class FirestoreService {
       
       final assetData = assetDoc.data()!;
       final currentAssetValue = parseCurrency(assetData['value'] ?? 'R\$ 0,00');
-      final quotasStr = assetData['amount']?.toString() ?? '0 Cotas';
+      final quotasStr = assetData['amount']?.toString() ?? '0 Tokens';
       
       // Adiciona o valor total do ativo de volta à carteira
       final newBalance = currentBalance + currentAssetValue;
@@ -265,6 +265,216 @@ class FirestoreService {
       });
     });
   }
+  // --- MÉTODOS DE PERGUNTAS PRIVADAS (FAQ) ---
+  Future<void> addPrivateQuestion(String startupId, String pergunta) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    if (pergunta.trim().isEmpty) throw Exception("A pergunta não pode ser vazia");
+
+    final startupRef = _db.collection('startups').doc(startupId);
+    final newId = DateTime.now().microsecondsSinceEpoch.toString();
+    await startupRef.update({
+      'faq': FieldValue.arrayUnion([
+        {
+          'id': newId,
+          'pergunta': pergunta.trim(),
+          'resposta': '',
+          'publico': false,
+          'askerId': user.uid,
+          'createdAt': DateTime.now().toIso8601String(),
+        }
+      ]),
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getMyPrivateQuestions(String startupId) {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db
+        .collection('startups')
+        .doc(startupId)
+        .snapshots()
+        .map((snap) {
+      final data = snap.data();
+      if (data == null) return <Map<String, dynamic>>[];
+      final faq = data['faq'];
+      if (faq is! List) return <Map<String, dynamic>>[];
+      return faq
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .where((q) => q['askerId'] == user.uid)
+          .toList();
+    }).asBroadcastStream();
+  }
+
+  Future<void> editPrivateQuestion(
+      String startupId, Map<String, dynamic> original, String novaPergunta) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    final novaTrim = novaPergunta.trim();
+    if (novaTrim.isEmpty) throw Exception("A pergunta não pode ser vazia");
+    if (original['askerId'] != user.uid) {
+      throw Exception("Você só pode editar suas próprias perguntas");
+    }
+
+    final startupRef = _db.collection('startups').doc(startupId);
+
+    await _db.runTransaction((transaction) async {
+      final snap = await transaction.get(startupRef);
+      if (!snap.exists) throw Exception("Startup não encontrada");
+
+      final data = snap.data()!;
+      final rawFaq = data['faq'];
+      final List<dynamic> faq =
+          rawFaq is List ? List<dynamic>.from(rawFaq) : <dynamic>[];
+
+      bool encontrou = false;
+      final List<Map<String, dynamic>> novoFaq = faq
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .map((q) {
+        if (!encontrou && _matchesQuestion(q, original)) {
+          encontrou = true;
+          if (q['publico'] == true) {
+            throw Exception(
+                "Pergunta já publicada não pode ser editada");
+          }
+          return {
+            ...q,
+            'pergunta': novaTrim,
+            'editedAt': DateTime.now().toIso8601String(),
+          };
+        }
+        return q;
+      }).toList();
+
+      if (!encontrou) throw Exception("Pergunta não encontrada");
+
+      transaction.update(startupRef, {'faq': novoFaq});
+    });
+  }
+
+  Future<void> deletePrivateQuestion(
+      String startupId, Map<String, dynamic> original) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    if (original['askerId'] != user.uid) {
+      throw Exception("Você só pode excluir suas próprias perguntas");
+    }
+
+    final startupRef = _db.collection('startups').doc(startupId);
+
+    await _db.runTransaction((transaction) async {
+      final snap = await transaction.get(startupRef);
+      if (!snap.exists) throw Exception("Startup não encontrada");
+
+      final data = snap.data()!;
+      final rawFaq = data['faq'];
+      final List<dynamic> faq =
+          rawFaq is List ? List<dynamic>.from(rawFaq) : <dynamic>[];
+
+      bool removeu = false;
+      final List<Map<String, dynamic>> novoFaq = [];
+      for (final item in faq) {
+        if (item is! Map) continue;
+        final q = Map<String, dynamic>.from(item);
+        if (!removeu && _matchesQuestion(q, original)) {
+          if (q['publico'] == true) {
+            throw Exception(
+                "Pergunta já publicada não pode ser excluída");
+          }
+          removeu = true;
+          continue;
+        }
+        novoFaq.add(q);
+      }
+
+      if (!removeu) throw Exception("Pergunta não encontrada");
+
+      transaction.update(startupRef, {'faq': novoFaq});
+    });
+  }
+
+  bool _matchesQuestion(Map<String, dynamic> q, Map<String, dynamic> original) {
+    final origId = original['id'];
+    if (origId != null && q['id'] != null) {
+      return q['id'] == origId;
+    }
+    return q['askerId'] == original['askerId'] &&
+        q['pergunta'] == original['pergunta'] &&
+        q['createdAt'] == original['createdAt'];
+  }
+
+  Future<void> addPublicQuestion(String startupId, String pergunta) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+    if (pergunta.trim().isEmpty) throw Exception("A pergunta não pode ser vazia");
+
+    final startupRef = _db.collection('startups').doc(startupId);
+    final newId = DateTime.now().microsecondsSinceEpoch.toString();
+    await startupRef.update({
+      'faq': FieldValue.arrayUnion([
+        {
+          'id': newId,
+          'pergunta': pergunta.trim(),
+          'resposta': '',
+          'publico': true,
+          'askerId': user.uid,
+          'createdAt': DateTime.now().toIso8601String(),
+        }
+      ]),
+    });
+  }
+
+  Future<void> ensureDefaultPublicQuestions(
+      String startupId, String startupName) async {
+    if (startupId.isEmpty) return;
+    final defaults = _defaultPublicFaqByName[startupName];
+    if (defaults == null || defaults.isEmpty) return;
+
+    final ref = _db.collection('startups').doc(startupId);
+    final snap = await ref.get();
+    if (!snap.exists) return;
+
+    final data = snap.data() ?? <String, dynamic>{};
+    final rawFaq = data['faq'];
+    final existing = rawFaq is List
+        ? rawFaq
+            .whereType<Map>()
+            .map((m) => Map<String, dynamic>.from(m))
+            .toList()
+        : <Map<String, dynamic>>[];
+    final existingIds = existing.map((q) => q['id']).toSet();
+    final missing =
+        defaults.where((q) => !existingIds.contains(q['id'])).toList();
+    if (missing.isEmpty) return;
+
+    await ref.update({'faq': FieldValue.arrayUnion(missing)});
+  }
+
+  Stream<List<Map<String, dynamic>>> getPublicQuestions(String startupId) {
+    return _db.collection('startups').doc(startupId).snapshots().map((snap) {
+      final data = snap.data();
+      if (data == null) return <Map<String, dynamic>>[];
+      final faq = data['faq'];
+      if (faq is! List) return <Map<String, dynamic>>[];
+      final publicas = faq
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .where((q) => q['publico'] == true)
+          .toList();
+      publicas.sort((a, b) {
+        final aOficial = a['askerId'] == null;
+        final bOficial = b['askerId'] == null;
+        if (aOficial != bOficial) return aOficial ? -1 : 1;
+        return (a['createdAt']?.toString() ?? '')
+            .compareTo(b['createdAt']?.toString() ?? '');
+      });
+      return publicas;
+    }).asBroadcastStream();
+  }
+
   // --- MÉTODOS P2P ---
   Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
     final user = _auth.currentUser;
@@ -272,7 +482,7 @@ class FirestoreService {
 
     final quotasStr = asset['amount']?.toString().split(' ').first ?? '0';
     final quotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
-    if (quotas <= 0) throw Exception("Cotas insuficientes");
+    if (quotas <= 0) throw Exception("Tokens insuficientes");
 
     await _db.collection('p2p_offers').add({
       'sellerId': user.uid,
@@ -394,8 +604,8 @@ class FirestoreService {
         if (sQuotas <= quotas) { // Se vendeu tudo ou de alguma forma passou do total
           transaction.delete(sDoc.reference);
         } else {
-          // Atualiza descontando as cotas. Prefix seria " AD" etc.
-          String prefix = sData['amount']?.toString().split(' ').length == 2 ? " ${sData['amount']?.toString().split(' ').last}" : " Cotas";
+          // Atualiza descontando os tokens. Prefix seria " AD" etc.
+          String prefix = sData['amount']?.toString().split(' ').length == 2 ? " ${sData['amount']?.toString().split(' ').last}" : " Tokens";
           // We need an approximate value deduction proportional to quotas
           final sValStr = sData['value']?.toString() ?? 'R\$ 0,00';
           final sVal = parseCurrency(sValStr);
@@ -415,7 +625,7 @@ class FirestoreService {
         final bData = bDoc.data();
         final bQuotasStr = bData['amount']?.toString().split(' ').first ?? '0';
         final bQuotas = double.tryParse(bQuotasStr.replaceAll(',', '.')) ?? 0.0;
-        String prefix = bData['amount']?.toString().split(' ').length == 2 ? " ${bData['amount']?.toString().split(' ').last}" : " Cotas";
+        String prefix = bData['amount']?.toString().split(' ').length == 2 ? " ${bData['amount']?.toString().split(' ').last}" : " Tokens";
         final bValStr = bData['value']?.toString() ?? 'R\$ 0,00';
         final bVal = parseCurrency(bValStr);
 
@@ -454,25 +664,19 @@ class FirestoreService {
     // Populando as startups
     final startupsCollection = _db.collection('startups');
     final query = await startupsCollection.limit(1).get();
-    
+
     if (query.docs.isEmpty) {
-      final List<Map<String, dynamic>> initialStartups = [
-        {"name": "EcoToken", "stage": "Em operação", "val": "R\$ 12,00"},
-        {"name": "HealthTech", "stage": "Em expansão", "val": "R\$ 45,50"},
-        {"name": "AgroData", "stage": "Nova", "val": "R\$ 5,00"},
-        {"name": "FinSol", "stage": "Em operação", "val": "R\$ 28,75"},
-        {"name": "Educa+", "stage": "Nova", "val": "R\$ 7,50"},
-        {"name": "Mobility Z", "stage": "Em expansão", "val": "R\$ 98,00"},
-        {"name": "Aura IA", "stage": "Nova", "val": "R\$ 21,30"},
-        {"name": "CleanEnergy", "stage": "Semente", "val": "R\$ 2,50"},
-        {"name": "SpaceT", "stage": "Em operação", "val": "R\$ 150,00"},
-        {"name": "BioGenesis", "stage": "Em expansão", "val": "R\$ 55,20"},
-      ];
-      
-      for (var startup in initialStartups) {
-        await startupsCollection.add(startup);
+      for (var startup in _initialStartupsSeed) {
+        final withFaq = {
+          ...startup,
+          'faq': _defaultPublicFaqByName[startup['name']] ??
+              const <Map<String, dynamic>>[],
+        };
+        await startupsCollection.add(withFaq);
       }
       debugPrint("Startups semeadas com sucesso!");
+    } else {
+      await migrateStartupsSchema();
     }
 
     // Populando carteira do usuário atual (se logado)
@@ -480,7 +684,7 @@ class FirestoreService {
     if (user != null) {
       final walletRef = _db.collection('users').doc(user.uid).collection('wallet').doc('main');
       final walletDoc = await walletRef.get();
-      
+
       if (!walletDoc.exists) {
         await walletRef.set({
           "balance": "R\$ 15.250,00",
@@ -490,6 +694,239 @@ class FirestoreService {
       }
     }
   }
+
+  Future<void> migrateStartupsSchema() async {
+    final startupsCollection = _db.collection('startups');
+    final snapshot = await startupsCollection.get();
+
+    int updated = 0;
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final defaults = _startupDefaultsByName(data['name']?.toString() ?? '');
+      final Map<String, dynamic> patch = {};
+
+      for (final entry in defaults.entries) {
+        if (!data.containsKey(entry.key) || data[entry.key] == null) {
+          patch[entry.key] = entry.value;
+        }
+      }
+
+      final defaultFaq =
+          _defaultPublicFaqByName[data['name']?.toString()] ??
+              const <Map<String, dynamic>>[];
+      if (defaultFaq.isNotEmpty) {
+        final rawFaq = data['faq'];
+        final existingFaq = rawFaq is List
+            ? rawFaq
+                .whereType<Map>()
+                .map((m) => Map<String, dynamic>.from(m))
+                .toList()
+            : <Map<String, dynamic>>[];
+        final existingIds = existingFaq.map((q) => q['id']).toSet();
+        final missing = defaultFaq
+            .where((q) => !existingIds.contains(q['id']))
+            .toList();
+        if (missing.isNotEmpty) {
+          patch['faq'] = [...missing, ...existingFaq];
+        }
+      }
+
+      if (patch.isNotEmpty) {
+        await doc.reference.update(patch);
+        updated++;
+      }
+    }
+    debugPrint("Migração de schema das startups: $updated documentos atualizados.");
+  }
+
+  Map<String, dynamic> _startupDefaultsByName(String name) {
+    final seeded = _initialStartupsSeed.firstWhere(
+      (s) => s['name'] == name,
+      orElse: () => const <String, dynamic>{},
+    );
+    return {
+      'description': seeded['description'] ?? '',
+      'sector': seeded['sector'] ?? '',
+      'capitalAportado': seeded['capitalAportado'] ?? 0,
+      'tokensEmitidos': seeded['tokensEmitidos'] ?? 0,
+      'socios': seeded['socios'] ?? <Map<String, dynamic>>[],
+      'mentoresConselho':
+          seeded['mentoresConselho'] ?? <String>[],
+      'videoUrl': seeded['videoUrl'],
+      'status': seeded['status'] ?? 'ativa',
+      'faq': seeded['faq'] ?? <Map<String, dynamic>>[],
+    };
+  }
+
+  // Perguntas públicas predefinidas exibidas no FAQ de cada startup.
+  static const Map<String, List<Map<String, dynamic>>> _defaultPublicFaqByName = {
+    "EcoTech": [
+      {
+        "id": "default-ecotech-1",
+        "pergunta": "Como a EcoTech gera receita?",
+        "resposta":
+            "Por meio de assinaturas mensais das empresas que utilizam a plataforma de monitoramento ambiental.",
+        "publico": true,
+      },
+      {
+        "id": "default-ecotech-2",
+        "pergunta": "Qual é o principal diferencial da startup?",
+        "resposta":
+            "Sensores próprios integrados a um painel de analytics em tempo real para conformidade ambiental.",
+        "publico": true,
+      },
+    ],
+    "FinFlow": [
+      {
+        "id": "default-finflow-1",
+        "pergunta": "Para quem é o produto da FinFlow?",
+        "resposta":
+            "Para MEIs e pequenos negócios que precisam de gestão simples e automatizada de fluxo de caixa.",
+        "publico": true,
+      },
+      {
+        "id": "default-finflow-2",
+        "pergunta": "Como é feita a cobrança aos clientes?",
+        "resposta":
+            "Plano mensal por assinatura, com diferentes faixas conforme o volume de transações.",
+        "publico": true,
+      },
+    ],
+    "AgroSmart": [
+      {
+        "id": "default-agrosmart-1",
+        "pergunta": "O que a solução da AgroSmart resolve?",
+        "resposta":
+            "Otimiza a irrigação no campo usando sensores IoT, reduzindo o desperdício de água e custos.",
+        "publico": true,
+      },
+      {
+        "id": "default-agrosmart-2",
+        "pergunta": "Em que estágio a startup está?",
+        "resposta":
+            "Em fase inicial (Nova), validando a tecnologia com produtores parceiros.",
+        "publico": true,
+      },
+    ],
+    "HealthVibe": [
+      {
+        "id": "default-healthvibe-1",
+        "pergunta": "Como a IA é utilizada na HealthVibe?",
+        "resposta":
+            "Para triagem inicial dos pacientes em atendimentos de telemedicina, agilizando o encaminhamento.",
+        "publico": true,
+      },
+      {
+        "id": "default-healthvibe-2",
+        "pergunta": "A plataforma substitui o médico?",
+        "resposta":
+            "Não. A IA apoia a triagem, mas o atendimento e o diagnóstico são sempre realizados por profissionais.",
+        "publico": true,
+      },
+    ],
+    "EduNext": [
+      {
+        "id": "default-edunext-1",
+        "pergunta": "O que torna os cursos da EduNext diferentes?",
+        "resposta":
+            "A gamificação do aprendizado, com trilhas, recompensas e acompanhamento de progresso.",
+        "publico": true,
+      },
+      {
+        "id": "default-edunext-2",
+        "pergunta": "Qual é o modelo de negócio?",
+        "resposta":
+            "Assinaturas de acesso às trilhas de cursos, com planos para alunos e para empresas.",
+        "publico": true,
+      },
+    ],
+  };
+
+  static const List<Map<String, dynamic>> _initialStartupsSeed = [
+    {
+      "name": "EcoTech",
+      "stage": "Em operação",
+      "val": "R\$ 3,00",
+      "description": "Plataforma de monitoramento ambiental para empresas.",
+      "sector": "Cleantech",
+      "capitalAportado": 300000,
+      "tokensEmitidos": 100000,
+      "socios": [
+        {"nome": "Ana Souza", "percentual": 60},
+        {"nome": "Carlos Lima", "percentual": 40},
+      ],
+      "mentoresConselho": ["Mariana Prado"],
+      "videoUrl": "https://exemplo.com/demo1",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "FinFlow",
+      "stage": "Em expansão",
+      "val": "R\$ 2,00",
+      "description": "Gestão de fluxo de caixa para MEIs.",
+      "sector": "Fintech",
+      "capitalAportado": 500000,
+      "tokensEmitidos": 250000,
+      "socios": [
+        {"nome": "Roberto Dias", "percentual": 50},
+        {"nome": "Julia Mota", "percentual": 50},
+      ],
+      "mentoresConselho": ["Ricardo Santos"],
+      "videoUrl": "https://exemplo.com/demo2",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "AgroSmart",
+      "stage": "Nova",
+      "val": "R\$ 2,00",
+      "description": "IoT para otimização de irrigação.",
+      "sector": "Agtech",
+      "capitalAportado": 150000,
+      "tokensEmitidos": 75000,
+      "socios": [
+        {"nome": "Marcos Vinicius", "percentual": 100},
+      ],
+      "mentoresConselho": ["Arnaldo Souza"],
+      "videoUrl": "https://exemplo.com/demo3",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "HealthVibe",
+      "stage": "Em operação",
+      "val": "R\$ 2,00",
+      "description": "Telemedicina com IA para triagem.",
+      "sector": "Healthtech",
+      "capitalAportado": 800000,
+      "tokensEmitidos": 400000,
+      "socios": [
+        {"nome": "Beatriz Luz", "percentual": 70},
+        {"nome": "Hugo Vaz", "percentual": 30},
+      ],
+      "mentoresConselho": ["Sandra Meireles"],
+      "videoUrl": "https://exemplo.com/demo4",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+    {
+      "name": "EduNext",
+      "stage": "Em expansão",
+      "val": "R\$ 2,25",
+      "description": "Plataforma de cursos gamificados.",
+      "sector": "Edutech",
+      "capitalAportado": 450000,
+      "tokensEmitidos": 200000,
+      "socios": [
+        {"nome": "Tiago André", "percentual": 100},
+      ],
+      "mentoresConselho": ["Fernando Silva"],
+      "videoUrl": "https://exemplo.com/demo5",
+      "status": "ativa",
+      "faq": <Map<String, dynamic>>[],
+    },
+  ];
 
   // --- MÉTODOS DE LIMPEZA ---
   Future<void> removePlaceholderAssets() async {

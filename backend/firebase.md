@@ -28,7 +28,18 @@ Firestore (default)
 │   └── {startupId}
 │       ├── name (string)
 │       ├── stage (string)
-│       └── val (string)
+│       ├── val (string)
+│       ├── description (string)
+│       ├── sector (string)
+│       ├── capitalAportado (number)
+│       ├── tokensEmitidos (number)
+│       ├── socios (array<map>)
+│       │   └── { nome: string, percentual: number }
+│       ├── mentoresConselho (array<string>)
+│       ├── videoUrl (string | null)
+│       ├── status (string)
+│       └── faq (array<map>)
+│           └── { pergunta: string, resposta: string, publico: boolean }
 │
 └── users/
     └── {userId}
@@ -54,8 +65,8 @@ Ofertas P2P criadas pelos vendedores da plataforma.
 | Campo | Tipo | Exemplo | Descrição |
 |-------|------|---------|-----------|
 | `createdAt` | timestamp | `7 mai 2026, 12:15:55` | Data e hora de criação da oferta |
-| `price` | number | `1000` | Preço unitário da cota ofertada |
-| `quotas` | number | `26.7` | Quantidade de cotas disponíveis |
+| `price` | number | `1000` | Preço unitário do token ofertado |
+| `quotas` | number | `26.7` | Quantidade de tokens disponíveis |
 | `sellerId` | string | `YkgslmTG1R7H4x...` | UID do vendedor (ref: users) |
 | `startupName` | string | `Educa+` | Nome da startup relacionada |
 | `status` | string | `active` | Status: `active` \| `inactive` \| `sold` |
@@ -71,8 +82,36 @@ Startups cadastradas e disponíveis para investimento.
 | Campo | Tipo | Exemplo | Descrição |
 |-------|------|---------|-----------|
 | `name` | string | `Mobility Z` | Nome da startup |
-| `stage` | string | `Em expansão` | Estágio atual da startup |
-| `val` | string | `R$ 98,00` | Valor de avaliação da cota |
+| `stage` | string | `Em expansão` | Estágio atual: `Nova` \| `Em operação` \| `Em expansão` |
+| `val` | string | `R$ 98,00` | Valor de avaliação do token |
+| `description` | string | `Plataforma de mobilidade urbana...` | Sumário executivo da startup |
+| `sector` | string | `Mobilidade` | Setor de atuação (ex: Cleantech, Healthtech, Fintech) |
+| `capitalAportado` | number | `1500000` | Capital total já aportado, em reais |
+| `tokensEmitidos` | number | `120000` | Quantidade total de tokens emitidos |
+| `socios` | array<map> | ver abaixo | Estrutura societária da startup |
+| `mentoresConselho` | array<string> | `['Mariana Prado']` | Mentores ou membros do conselho consultivo |
+| `videoUrl` | string \| null | `https://...` | URL do vídeo demonstrativo (pode ser `null`) |
+| `status` | string | `ativa` | Status da startup: `ativa` \| `pausada` \| `encerrada` |
+| `faq` | array<map> | ver abaixo | Perguntas e respostas (públicas e privadas) |
+
+### Subestrutura: `socios[]`
+
+Cada elemento do array `socios` é um mapa com:
+
+| Campo | Tipo | Exemplo | Descrição |
+|-------|------|---------|-----------|
+| `nome` | string | `Ana Souza` | Nome completo do sócio |
+| `percentual` | number | `45` | Percentual de participação societária (0–100) |
+
+### Subestrutura: `faq[]`
+
+Cada elemento do array `faq` é um mapa com:
+
+| Campo | Tipo | Exemplo | Descrição |
+|-------|------|---------|-----------|
+| `pergunta` | string | `Como funciona o token?` | Pergunta do FAQ |
+| `resposta` | string | `O token representa...` | Resposta correspondente |
+| `publico` | boolean | `true` | Se `true`, é exibida na tela pública da startup |
 
 ---
 

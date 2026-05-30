@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/ativo_card_widget.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/filtro_ativos_widget.dart';
@@ -29,7 +30,10 @@ class _PortfolioPageState extends State<PortfolioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Meus Investimentos'), centerTitle: true),
+          title: const Text('Meus Investimentos'),
+          centerTitle: true,
+          automaticallyImplyLeading: false),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 2),
       body: SafeArea(
         child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: _startupsStream,

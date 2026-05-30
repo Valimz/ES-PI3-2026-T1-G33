@@ -50,7 +50,10 @@ class InvestimentoModel {
     required this.status,
     required this.posicao,
     required this.variacao,
+    this.faq = const [],
   });
+
+  final List<Map<String, dynamic>> faq;
 
   // Constrói um InvestimentoModel a partir de docs do Firestore.
   // startupDoc: documento da coleção 'startups'
@@ -85,19 +88,48 @@ class InvestimentoModel {
             ? EstagioStartup.emOperacao
             : EstagioStartup.nova;
 
+    final capitalAportadoFirestore =
+        _parseNum(startupDoc['capitalAportado'])?.toDouble() ?? precoAtual;
+    final tokensEmitidosFirestore =
+        _parseNum(startupDoc['tokensEmitidos'])?.toInt() ?? 0;
+
+    final sociosMap = _parseListOfMaps(startupDoc['socios']);
+    final socios = <String>[];
+    final participacao = <double>[];
+    for (final s in sociosMap) {
+      socios.add(s['nome']?.toString() ?? '');
+      participacao.add(_parseNum(s['percentual'])?.toDouble() ?? 0.0);
+    }
+
+    final mentores = _parseListOfStrings(startupDoc['mentoresConselho']);
+
+    final videoUrl = startupDoc['videoUrl']?.toString();
+    final videoDemo =
+        (videoUrl == null || videoUrl.isEmpty || videoUrl == 'null')
+            ? null
+            : videoUrl;
+
+    final statusStr = startupDoc['status']?.toString().toLowerCase() ?? 'ativa';
+    final status = statusStr.contains('pausad')
+        ? StatusStartup.pausada
+        : statusStr.contains('encerr')
+            ? StatusStartup.encerrada
+            : StatusStartup.ativa;
+
     return InvestimentoModel(
       id: startupDoc['id']?.toString() ?? startupDoc['name'] ?? '',
       nome: startupDoc['name']?.toString() ?? '',
       descricao: startupDoc['description']?.toString() ?? '',
       estagio: estagio,
       setor: startupDoc['sector']?.toString() ?? '',
-      capitalAportado: precoAtual,
-      tokensEmitidos: 0,
-      socios: [],
-      participacaoSocietaria: [],
-      mentoresConselho: [],
-      videoDemo: null,
-      status: StatusStartup.ativa,
+      capitalAportado: capitalAportadoFirestore,
+      tokensEmitidos: tokensEmitidosFirestore,
+      socios: socios,
+      participacaoSocietaria: participacao,
+      mentoresConselho: mentores,
+      videoDemo: videoDemo,
+      status: status,
+      faq: _parseListOfMaps(startupDoc['faq']),
       posicao: PosicaoModel(
         quantidade: quantidade,
         precoMedio: precoMedio,
@@ -113,5 +145,27 @@ class InvestimentoModel {
   static double _parseCurrency(String value) {
     final cleaned = value.replaceAll(RegExp(r'[^\d,.]'), '').replaceAll(',', '.');
     return double.tryParse(cleaned) ?? 0.0;
+  }
+
+  static num? _parseNum(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return raw;
+    return num.tryParse(raw.toString().replaceAll(',', '.'));
+  }
+
+  static List<Map<String, dynamic>> _parseListOfMaps(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((m) => Map<String, dynamic>.from(m))
+        .toList();
+  }
+
+  static List<String> _parseListOfStrings(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((e) => e?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
   }
 }

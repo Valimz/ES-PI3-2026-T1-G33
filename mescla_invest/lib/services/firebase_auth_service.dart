@@ -11,20 +11,14 @@ class FirebaseAuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // Login com Email e Senha
+  // Propaga a FirebaseAuthException (com o `code`) para a camada de UI
+  // poder diferenciar credencial inválida de erros de rede/servidor.
   Future<User?> loginWithEmailAndPassword(String email, String password) async {
-    try {
-      UserCredential credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return credential.user;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        throw Exception('Email ou senha inválidos.');
-      } else {
-        throw Exception('Erro ao fazer login: \${e.message}');
-      }
-    }
+    final UserCredential credential = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return credential.user;
   }
 
   // Registro com Email, Senha, Nome, CPF e Telefone (opcional)
@@ -66,7 +60,7 @@ class FirebaseAuthService {
       } else if (e.code == 'email-already-in-use') {
         throw Exception('A conta já existe para este email.');
       } else {
-        throw Exception('Erro ao registrar: \${e.message}');
+        throw Exception('Erro ao registrar: ${e.message}');
       }
     }
   }

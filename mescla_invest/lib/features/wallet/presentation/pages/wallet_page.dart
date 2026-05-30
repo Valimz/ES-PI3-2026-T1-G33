@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
+import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/features/wallet/presentation/pages/transaction_details_page.dart';
 import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
@@ -33,16 +34,13 @@ class _WalletPageState extends State<WalletPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Carteira',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: AppColors.primary,
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
-          onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           IconButton(
@@ -73,6 +71,7 @@ class _WalletPageState extends State<WalletPage> {
           const SizedBox(height: 32),
         ],
       ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
     );
   }
 
@@ -109,12 +108,20 @@ class _WalletPageState extends State<WalletPage> {
               Row(
                 children: [
                   Expanded(
-                      child: _buildActionButton(
-                          Icons.arrow_downward, "Depositar")),
+                    child: _buildActionButton(
+                      Icons.arrow_downward,
+                      "Depositar",
+                      onPressed: _showDepositDialog,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
-                      child:
-                          _buildActionButton(Icons.arrow_upward, "Retirar")),
+                    child: _buildActionButton(
+                      Icons.arrow_upward,
+                      "Retirar",
+                      onPressed: () => _showWithdrawDialog(balance),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -124,9 +131,10 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label) {
+  Widget _buildActionButton(IconData icon, String label,
+      {required VoidCallback onPressed}) {
     return ElevatedButton(
-      onPressed: () {},
+      onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.accent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -150,6 +158,134 @@ class _WalletPageState extends State<WalletPage> {
         ],
       ),
     );
+  }
+
+  double _parseBrlString(String value) {
+    final clean =
+        value.replaceAll(RegExp(r'[^0-9,\.]'), '').replaceAll('.', '').replaceAll(',', '.');
+    return double.tryParse(clean) ?? 0.0;
+  }
+
+  Future<void> _showDepositDialog() async {
+    final controller = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Depositar'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Valor (R\$)',
+              prefixIcon: Icon(Icons.monetization_on),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final v = double.tryParse(
+                    controller.text.replaceAll('.', '').replaceAll(',', '.'));
+                if (v == null || v <= 0) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Insira um valor válido')),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, v);
+              },
+              child: const Text('Depositar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    try {
+      await BackendService().addFunds(result);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Depósito de R\$ ${result.toStringAsFixed(2)} realizado!')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erro ao depositar: $e')));
+    }
+  }
+
+  Future<void> _showWithdrawDialog(String balanceLabel) async {
+    final available = _parseBrlString(balanceLabel);
+    final controller = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Retirar'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Saldo disponível: $balanceLabel',
+                  style: const TextStyle(color: Colors.grey)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Valor (R\$)',
+                  prefixIcon: Icon(Icons.monetization_on),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final v = double.tryParse(
+                    controller.text.replaceAll('.', '').replaceAll(',', '.'));
+                if (v == null || v <= 0) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Insira um valor válido')),
+                  );
+                  return;
+                }
+                if (v > available) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Saldo insuficiente')),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, v);
+              },
+              child: const Text('Retirar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    try {
+      await BackendService().withdrawFunds(result);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Retirada de R\$ ${result.toStringAsFixed(2)} realizada!')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erro ao retirar: $e')));
+    }
   }
 
   Widget _buildSectionTitle(String title) {
@@ -364,27 +500,135 @@ class _WalletPageState extends State<WalletPage> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        Navigator.pushNamed(context, '/explore');
+                        _showPartialSellDialog(asset);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
+                        backgroundColor: Colors.white,
                         foregroundColor: AppColors.primary,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: AppColors.primary),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text('Comprar Mais',
+                      child: const Text('Vender Parte',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacementNamed(context, '/explore');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Comprar Mais',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _showPartialSellDialog(Map<String, dynamic> asset) async {
+    final amountStr = asset['amount']?.toString() ?? '0 Tokens';
+    final parts = amountStr.split(' ');
+    final totalQuotas =
+        double.tryParse((parts.first).replaceAll(',', '.')) ?? 0.0;
+    final unitLabel = parts.length > 1 ? parts.sublist(1).join(' ') : 'Tokens';
+    final controller = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (totalQuotas <= 0) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Nenhum token disponível para venda.')),
+      );
+      return;
+    }
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Vender parte de ${asset['name']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Você possui ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')} $unitLabel',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Tokens a vender',
+                  prefixIcon: const Icon(Icons.pie_chart_outline),
+                  helperText: 'Máximo: ${totalQuotas.toStringAsFixed(1).replaceAll('.', ',')}',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final v = double.tryParse(
+                    controller.text.replaceAll(',', '.'));
+                if (v == null || v <= 0) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Insira uma quantidade válida')),
+                  );
+                  return;
+                }
+                if (v > totalQuotas + 1e-9) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(content: Text('Quantidade maior do que o disponível')),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, v);
+              },
+              child: const Text('Vender'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    try {
+      await BackendService().sellPartialAsset(asset, result);
+      messenger.showSnackBar(
+        SnackBar(
+            content: Text(
+                'Venda de ${result.toStringAsFixed(1).replaceAll('.', ',')} $unitLabel de ${asset['name']} realizada!')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Erro ao vender: $e')));
+    }
   }
 
   Widget _buildAcquisitionsList() {
