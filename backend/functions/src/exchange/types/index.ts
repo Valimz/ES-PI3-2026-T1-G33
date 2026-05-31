@@ -16,7 +16,7 @@ export type GraphPoint = {
   quantity: number;
 };
 
-export {addFunds, buyAsset, sellAsset} from "../handlers/walletHandlers";
+export {addFunds, buyAsset, sellAsset, withdrawFunds, sellPartialAsset} from "../handlers/walletHandlers";
 export {createP2POffer, makeCounterOffer, acceptOffer} from "../handlers/p2pHandlers";
 export {getGraphSummary, getGraphHistory, getGraphAsset} from "../handlers/graphHandlers";
 export {registerNotificationToken, sendNotification} from "../handlers/notificationHandlers";
