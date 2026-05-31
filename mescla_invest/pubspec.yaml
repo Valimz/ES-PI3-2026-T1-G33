@@ -39,7 +39,6 @@ dependencies:
   firebase_auth: ^6.3.0
   firebase_core: ^4.6.0
   intl: ^0.20.2
-  socket_io_client: ^3.1.4
   firebase_messaging: ^16.0.0
   flutter_local_notifications: ^19.0.0
   url_launcher: ^6.3.1

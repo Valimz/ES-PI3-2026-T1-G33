@@ -6,10 +6,10 @@ export const assetsCollectionFor = (uid: string) => db.collection("users").doc(u
 
 export const acquisitionsCollectionFor = (uid: string) => db.collection("users").doc(uid).collection("acquisitions");
 
-export const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
+export const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace(".", ",")}`;
 
 export const parseCurrency = (value: string) => {
-  const cleanValue = value.replace(/[^0-9,.-]/g, "").replace(',', '.');
+  const cleanValue = value.replace(/[^0-9,.-]/g, "").replace(",", ".");
   const parsed = Number.parseFloat(cleanValue);
   return Number.isNaN(parsed) ? 0 : parsed;
 };

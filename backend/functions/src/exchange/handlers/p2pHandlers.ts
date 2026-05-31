@@ -1,7 +1,7 @@
 import {onCall, HttpsError} from "firebase-functions/https";
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../startups/shared/firebase";
-import {requireAuthenticatedUser} from "../../startups/shared/auth";
+import {requireAuthenticatedUser} from "../shared/auth";
 import {p2pOffersCollection, p2pOfferRef, p2pNegotiationsCollection} from "../repositories/p2pRepository";
 import {formatCurrency, parseCurrency, assetsCollectionFor, walletRefFor} from "../repositories/walletRepository";
 

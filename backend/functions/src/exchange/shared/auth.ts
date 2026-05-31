@@ -1,5 +1,10 @@
 import {CallableRequest, HttpsError} from "firebase-functions/https";
-import {AuthenticatedUser} from "../types";
+
+export type AuthenticatedUser = {
+  uid: string;
+  email?: string;
+};
+
 export function requireAuthenticatedUser(
   request: CallableRequest
 ): AuthenticatedUser {

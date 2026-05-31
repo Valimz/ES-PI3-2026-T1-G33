@@ -1,6 +1,6 @@
 import {onCall, HttpsError} from "firebase-functions/https";
 import {db} from "../../startups/shared/firebase";
-import {requireAuthenticatedUser} from "../../startups/shared/auth";
+import {requireAuthenticatedUser} from "../shared/auth";
 import {assetsCollectionFor, acquisitionsCollectionFor, walletRefFor, formatCurrency, parseCurrency} from "../repositories/walletRepository";
 
 // Usando `formatCurrency` e `parseCurrency` de `walletRepository` para centralizar a logica de formatação/parsing.
@@ -105,9 +105,9 @@ export const getGraphHistory = onCall(async (request) => {
   const startupNameValue = request.data?.startupName;
   const typeValue = request.data?.type;
 
-  const startupName = typeof startupNameValue === "string"
-    ? startupNameValue.trim()
-    : "";
+  const startupName = typeof startupNameValue === "string" ?
+    startupNameValue.trim() :
+    "";
   const type = typeof typeValue === "string" ? typeValue.trim() : undefined;
   const startupNameNormalized = startupName.toLowerCase();
 

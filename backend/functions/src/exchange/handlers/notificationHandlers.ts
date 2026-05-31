@@ -1,7 +1,7 @@
 import {onCall} from "firebase-functions/https";
 import {FieldValue} from "firebase-admin/firestore";
 import * as admin from "firebase-admin";
-import {requireAuthenticatedUser} from "../../startups/shared/auth";
+import {requireAuthenticatedUser} from "../shared/auth";
 import {buildNotificationPayload, notificationTokensCollectionFor, notificationsCollectionFor} from "../repositories/notificationRepository";
 
 export const registerNotificationToken = onCall(async (request) => {
