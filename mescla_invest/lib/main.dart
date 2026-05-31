@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/app.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 import 'package:mescla_invest/services/notification_service.dart';
 import 'firebase_options.dart';
 
@@ -36,6 +37,7 @@ Future<void> _configureLocalEmulators() async {
   final emulatorHost = _firebaseEmulatorHost();
   FirebaseAuth.instance.useAuthEmulator(emulatorHost, 9099);
   FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 8080);
+  FunctionsService().configureEmulator();
 }
 
 String _firebaseEmulatorHost() {

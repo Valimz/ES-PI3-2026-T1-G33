@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 
 class BackendService {
@@ -10,10 +10,7 @@ class BackendService {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'pt_BR',
-    symbol: 'R\$',
-  );
+  final FunctionsService _functionsService = FunctionsService();
 
   BackendService._internal();
 
@@ -34,118 +31,38 @@ class BackendService {
   }
 
   Future<void> addFunds(double amountToAdd) async {
-    await _firestoreService.addFunds(amountToAdd);
+    await _functionsService.addFunds(amountToAdd);
   }
 
   Future<void> negotiateAsset(Map<String, dynamic> startup, double amountToBuy) async {
-    await _firestoreService.negotiateAsset(startup, amountToBuy);
+    await _functionsService.negotiateAsset(startup, amountToBuy);
   }
 
   Future<void> sellAllAsset(Map<String, dynamic> asset) async {
-    await _firestoreService.sellAllAsset(asset);
+    await _functionsService.sellAllAsset(asset);
   }
 
   Future<void> sellPartialAsset(
       Map<String, dynamic> asset, double quotasToSell) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não logado');
-
     if (quotasToSell <= 0) {
       throw Exception('Quantidade inválida para venda');
     }
-
-    final walletRef = _db.collection('users').doc(user.uid).collection('wallet').doc('main');
-    final assetRef = _db.collection('users').doc(user.uid).collection('assets').doc(asset['id']);
-
-    await _db.runTransaction((transaction) async {
-      final walletDoc = await transaction.get(walletRef);
-      final assetDoc = await transaction.get(assetRef);
-
-      if (!walletDoc.exists) throw Exception('Carteira não encontrada');
-      if (!assetDoc.exists) throw Exception('Ativo não encontrado');
-
-      final walletData = walletDoc.data()!;
-      final currentBalance = _firestoreService.parseCurrency(walletData['balance'] ?? 'R\$ 0,00');
-
-      final assetData = assetDoc.data()!;
-      final currentAssetValue = _firestoreService.parseCurrency(assetData['value'] ?? 'R\$ 0,00');
-      final quotasStr = assetData['amount']?.toString().split(' ').first ?? '0';
-      final currentQuotas = double.tryParse(quotasStr.replaceAll(',', '.')) ?? 0.0;
-
-      if (currentQuotas <= 0) throw Exception('Quantidade de tokens inválida');
-      if (quotasToSell > currentQuotas) throw Exception('Quantidade insuficiente de tokens');
-
-      final sellRatio = quotasToSell / currentQuotas;
-      final sellValue = currentAssetValue * sellRatio;
-      final remainingQuotas = currentQuotas - quotasToSell;
-      final remainingValue = currentAssetValue - sellValue;
-      final suffixParts = assetData['amount']?.toString().split(' ') ?? <String>[];
-      final suffix = suffixParts.length >= 2 ? ' ${suffixParts.sublist(1).join(' ')}' : ' Tokens';
-
-      transaction.update(walletRef, {
-        'balance': _currencyFormat.format(currentBalance + sellValue),
-      });
-
-      if (remainingQuotas <= 0.0001) {
-        transaction.delete(assetRef);
-      } else {
-        transaction.update(assetRef, {
-          'amount': '${remainingQuotas.toStringAsFixed(1)}$suffix',
-          'value': _currencyFormat.format(remainingValue > 0 ? remainingValue : 0),
-        });
-      }
-
-      final acquisitionRef = _db.collection('users').doc(user.uid).collection('acquisitions').doc();
-      transaction.set(acquisitionRef, {
-        'type': 'sell',
-        'title': 'Venda parcial: ${assetData['name']}',
-        'amount': _currencyFormat.format(sellValue),
-        'quotas': '${quotasToSell.toStringAsFixed(1)}$suffix',
-        'date': FieldValue.serverTimestamp(),
-      });
-    });
+    await _functionsService.sellPartialAsset(asset, quotasToSell);
   }
 
   Future<void> withdrawFunds(double amountToWithdraw) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não logado');
-
     if (amountToWithdraw <= 0) {
       throw Exception('Valor inválido para saque');
     }
-
-    final walletRef = _db.collection('users').doc(user.uid).collection('wallet').doc('main');
-
-    await _db.runTransaction((transaction) async {
-      final walletDoc = await transaction.get(walletRef);
-      if (!walletDoc.exists) throw Exception('Carteira não encontrada');
-
-      final walletData = walletDoc.data()!;
-      final currentBalance = _firestoreService.parseCurrency(walletData['balance'] ?? 'R\$ 0,00');
-      if (currentBalance < amountToWithdraw) {
-        throw Exception('Saldo insuficiente');
-      }
-
-      transaction.update(walletRef, {
-        'balance': _currencyFormat.format(currentBalance - amountToWithdraw),
-      });
-
-      final acquisitionRef = _db.collection('users').doc(user.uid).collection('acquisitions').doc();
-      transaction.set(acquisitionRef, {
-        'type': 'withdraw',
-        'title': 'Saque',
-        'amount': _currencyFormat.format(amountToWithdraw),
-        'date': FieldValue.serverTimestamp(),
-      });
-    });
+    await _functionsService.withdrawFunds(amountToWithdraw);
   }
 
   Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
-    await _firestoreService.createP2POffer(asset, price);
+    await _functionsService.createP2POffer(asset, price);
   }
 
   Future<void> makeCounterOffer(String offerId, double proposedPrice) async {
-    await _firestoreService.makeCounterOffer(offerId, proposedPrice);
+    await _functionsService.makeCounterOffer(offerId, proposedPrice);
   }
 
   Future<void> editP2POffer(String offerId, double price) async {
@@ -188,30 +105,25 @@ class BackendService {
 
   Future<void> acceptP2POffer(String offerId, {double? acceptedPrice, String? buyerIdParam, String? negotiationId}) async {
     if (negotiationId != null && acceptedPrice != null) {
-      await _firestoreService.acceptCounterOffer(offerId, negotiationId, acceptedPrice);
+      await _functionsService.acceptP2POffer(
+        offerId,
+        acceptedPrice: acceptedPrice,
+        buyerIdParam: buyerIdParam ?? negotiationId,
+        negotiationId: negotiationId,
+      );
       return;
     }
 
     if (negotiationId != null && acceptedPrice == null) {
-      final negotiationDoc = await _db
-          .collection('p2p_offers')
-          .doc(offerId)
-          .collection('negotiations')
-          .doc(negotiationId)
-          .get();
-      final negotiationData = negotiationDoc.data();
-      final negotiatedPrice = negotiationData?['proposedPrice'];
-      if (negotiatedPrice is num) {
-        await _firestoreService.acceptCounterOffer(
-          offerId,
-          negotiationId,
-          negotiatedPrice.toDouble(),
-        );
-        return;
-      }
+      await _functionsService.acceptP2POffer(
+        offerId,
+        buyerIdParam: buyerIdParam ?? negotiationId,
+        negotiationId: negotiationId,
+      );
+      return;
     }
 
-    await _firestoreService.acceptP2POffer(
+    await _functionsService.acceptP2POffer(
       offerId,
       acceptedPrice: acceptedPrice,
       buyerIdParam: buyerIdParam,
