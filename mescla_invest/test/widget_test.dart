@@ -106,7 +106,7 @@ const _callableTestsSkipMessage = 'Inicie os emuladores e rode com '
 
 Uri _functionUri(String functionName) {
  return Uri.parse(
- '$_functionsOrigin/$_projectId/us-central1/$functionName',
+ '$_functionsOrigin/$_projectId/southamerica-east1/$functionName',
  );
 }
 Uri _authSignUpUri() {

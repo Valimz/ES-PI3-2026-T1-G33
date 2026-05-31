@@ -6,7 +6,7 @@ class FunctionsService {
   static final FunctionsService _instance = FunctionsService._internal();
   factory FunctionsService() => _instance;
 
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'southamerica-east1');
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   bool _emulatorConfigured = false;

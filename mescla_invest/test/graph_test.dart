@@ -9,7 +9,7 @@ const _authOrigin = String.fromEnvironment('FIREBASE_AUTH_ORIGIN', defaultValue:
 const _testEmail = 'graph-test@local.test';
 const _testPass = '123456qwerty';
 
-Uri _functionUri(String name) => Uri.parse('$_functionsOrigin/$_projectId/us-central1/$name');
+Uri _functionUri(String name) => Uri.parse('$_functionsOrigin/$_projectId/southamerica-east1/$name');
 Uri _authSignUp() => Uri.parse('$_authOrigin/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key');
 Uri _authSignIn() => Uri.parse('$_authOrigin/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key');
 
@@ -39,7 +39,7 @@ Future<Map<String, dynamic>> _signin() async {
 }
 
 Future<Map<String, dynamic>> _callFunction(String name, {Map<String,dynamic> data = const {}, String? idToken}) async {
-  final uri = Uri.parse('$_functionsOrigin/$_projectId/us-central1/$name');
+  final uri = Uri.parse('$_functionsOrigin/$_projectId/southamerica-east1/$name');
   final headers = {'Content-Type': 'application/json'};
   if (idToken != null) headers['Authorization'] = 'Bearer $idToken';
   final r = await http.post(uri, headers: headers, body: jsonEncode({'data': data}));
