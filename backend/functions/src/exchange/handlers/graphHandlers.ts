@@ -1,14 +1,9 @@
 import {onCall, HttpsError} from "firebase-functions/https";
 import {db} from "../../startups/shared/firebase";
 import {requireAuthenticatedUser} from "../../startups/shared/auth";
+import {assetsCollectionFor, acquisitionsCollectionFor, walletRefFor, formatCurrency, parseCurrency} from "../repositories/walletRepository";
 
-const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace(".", ",")}`;
-
-const parseCurrency = (value: string) => {
-  const cleanValue = value.replace(/[^0-9,.-]/g, "").replace(",", ".");
-  const parsed = Number.parseFloat(cleanValue);
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
+// Usando `formatCurrency` e `parseCurrency` de `walletRepository` para centralizar a logica de formatação/parsing.
 
 const parseQuantity = (value: unknown) => {
   const raw = value?.toString().split(" ")[0] ?? "0";
@@ -68,9 +63,9 @@ export const getGraphSummary = onCall(async (request) => {
   const user = requireAuthenticatedUser(request);
 
   const [walletDoc, assetsSnapshot, acquisitionsSnapshot, startupsSnapshot] = await Promise.all([
-    db.collection("users").doc(user.uid).collection("wallet").doc("main").get(),
-    db.collection("users").doc(user.uid).collection("assets").get(),
-    db.collection("users").doc(user.uid).collection("acquisitions").get(),
+    walletRefFor(user.uid).get(),
+    assetsCollectionFor(user.uid).get(),
+    acquisitionsCollectionFor(user.uid).get(),
     db.collection("startups").get(),
   ]);
 
@@ -83,14 +78,11 @@ export const getGraphSummary = onCall(async (request) => {
   const currentValue = assets.reduce((sum, asset) => {
     const startup = startupsByName.get(String(asset.name ?? ""));
     const currentPrice = parseCurrency(startup?.val?.toString() ?? asset.value?.toString() ?? "R$ 0,00");
-    const quantity = parseQuantity(asset.amount);
+    const quantity = parseFloat((asset.amount?.toString().split(" ")[0] ?? "0").replace(",", ".")) || 0;
     return sum + quantity * currentPrice;
   }, 0);
 
-  const totalInvested = assets.reduce(
-    (sum, asset) => sum + parseCurrency(asset.value?.toString() ?? "R$ 0,00"),
-    0
-  );
+  const totalInvested = assets.reduce((sum, asset) => sum + parseCurrency(asset.value?.toString() ?? "R$ 0,00"), 0);
   const variationReais = currentValue - totalInvested;
   const variationPercentual = totalInvested > 0 ? (variationReais / totalInvested) * 100 : 0;
   const walletBalance = walletDoc.exists ? walletDoc.data()?.balance?.toString() ?? "R$ 0,00" : "R$ 0,00";
@@ -119,7 +111,7 @@ export const getGraphHistory = onCall(async (request) => {
   const type = typeof typeValue === "string" ? typeValue.trim() : undefined;
   const startupNameNormalized = startupName.toLowerCase();
 
-  let query: FirebaseFirestore.Query = db.collection("users").doc(user.uid).collection("acquisitions").orderBy("date", "asc");
+  let query: FirebaseFirestore.Query = acquisitionsCollectionFor(user.uid).orderBy("date", "asc");
 
   if (type) {
     query = query.where("type", "==", type);
@@ -150,8 +142,8 @@ export const getGraphAsset = onCall(async (request) => {
   }
 
   const [assetSnapshot, acquisitionsSnapshot, startupSnapshot] = await Promise.all([
-    db.collection("users").doc(user.uid).collection("assets").where("name", "==", startupName).get(),
-    db.collection("users").doc(user.uid).collection("acquisitions").orderBy("date", "asc").get(),
+    assetsCollectionFor(user.uid).where("name", "==", startupName).get(),
+    acquisitionsCollectionFor(user.uid).orderBy("date", "asc").get(),
     db.collection("startups").where("name", "==", startupName).limit(1).get(),
   ]);
 
