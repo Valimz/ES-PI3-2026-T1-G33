@@ -1,12 +1,12 @@
 import {onCall, HttpsError} from "firebase-functions/https";
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../startups/shared/firebase";
-import {requireAuthenticatedUser} from "../shared/auth";
+import {requireAuthenticatedUserWith2FA} from "../../startups/shared/auth";
 import {p2pOffersCollection, p2pOfferRef, p2pNegotiationsCollection} from "../repositories/p2pRepository";
 import {formatCurrency, parseCurrency, assetsCollectionFor, walletRefFor} from "../repositories/walletRepository";
 
 export const createP2POffer = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const asset = request.data?.asset;
   const price = request.data?.price;
 
@@ -34,7 +34,7 @@ export const createP2POffer = onCall(async (request) => {
 });
 
 export const makeCounterOffer = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const offerId = request.data?.offerId;
   const proposedPrice = request.data?.proposedPrice;
 
@@ -53,7 +53,7 @@ export const makeCounterOffer = onCall(async (request) => {
 });
 
 export const acceptOffer = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const offerId = request.data?.offerId;
   const acceptedPrice = request.data?.acceptedPrice;
   const buyerIdParam = request.data?.buyerIdParam;
@@ -168,7 +168,7 @@ export const acceptOffer = onCall(async (request) => {
 });
 
 export const editP2POffer = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const offerId = request.data?.offerId;
   const price = request.data?.price;
 
@@ -199,7 +199,7 @@ export const editP2POffer = onCall(async (request) => {
 });
 
 export const cancelP2POffer = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const offerId = request.data?.offerId;
 
   if (!offerId) {

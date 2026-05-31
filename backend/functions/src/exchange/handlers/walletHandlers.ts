@@ -1,13 +1,13 @@
 import {onCall, HttpsError} from "firebase-functions/https";
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../startups/shared/firebase";
-import {requireAuthenticatedUser} from "../shared/auth";
+import {requireAuthenticatedUserWith2FA} from "../../startups/shared/auth";
 import {sendNotification} from "./notificationHandlers";
 import {walletRefFor, assetsCollectionFor, acquisitionsCollectionFor, formatCurrency, parseCurrency} from "../repositories/walletRepository";
 import {removeUserPrivateQuestions, cancelOverCommittedP2POffers} from "../repositories/p2pRepository";
 
 export const addFunds = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const amount = request.data?.amount;
 
   if (typeof amount !== "number" || amount <= 0) {
@@ -40,7 +40,7 @@ export const addFunds = onCall(async (request) => {
 });
 
 export const buyAsset = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const startup = request.data?.startup;
   const amountToBuy = request.data?.amountToBuy;
 
@@ -110,7 +110,7 @@ export const buyAsset = onCall(async (request) => {
 });
 
 export const sellAsset = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const asset = request.data?.asset;
 
   if (!asset || !asset.id) {
@@ -157,7 +157,7 @@ export const sellAsset = onCall(async (request) => {
 });
 
 export const withdrawFunds = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const amount = request.data?.amount;
 
   if (typeof amount !== "number" || amount <= 0) {
@@ -204,7 +204,7 @@ export const withdrawFunds = onCall(async (request) => {
 });
 
 export const sellPartialAsset = onCall(async (request) => {
-  const user = requireAuthenticatedUser(request);
+  const user = await requireAuthenticatedUserWith2FA(request);
   const asset = request.data?.asset;
   const quotasToSell = request.data?.quotasToSell;
 
