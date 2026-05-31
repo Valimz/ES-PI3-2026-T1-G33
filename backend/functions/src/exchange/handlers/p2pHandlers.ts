@@ -166,3 +166,64 @@ export const acceptOffer = onCall(async (request) => {
 
   return {data: {message: "Offer accepted successfully"}};
 });
+
+export const editP2POffer = onCall(async (request) => {
+  const user = requireAuthenticatedUser(request);
+  const offerId = request.data?.offerId;
+  const price = request.data?.price;
+
+  if (!offerId || typeof price !== "number" || price <= 0) {
+    throw new HttpsError("invalid-argument", "offerId e price sao obrigatorios.");
+  }
+
+  const offerRef = p2pOfferRef(offerId);
+
+  await db.runTransaction(async (transaction) => {
+    const offerDoc = await transaction.get(offerRef);
+    if (!offerDoc.exists) {
+      throw new HttpsError("not-found", "Oferta nao encontrada.");
+    }
+
+    const offerData = offerDoc.data() ?? {};
+    if (offerData.sellerId !== user.uid) {
+      throw new HttpsError("permission-denied", "Voce nao pode editar uma oferta que nao e sua.");
+    }
+    if (offerData.status !== "active") {
+      throw new HttpsError("failed-precondition", "Esta oferta nao esta mais ativa.");
+    }
+
+    transaction.update(offerRef, {price});
+  });
+
+  return {data: {message: "Offer updated successfully"}};
+});
+
+export const cancelP2POffer = onCall(async (request) => {
+  const user = requireAuthenticatedUser(request);
+  const offerId = request.data?.offerId;
+
+  if (!offerId) {
+    throw new HttpsError("invalid-argument", "offerId e obrigatorio.");
+  }
+
+  const offerRef = p2pOfferRef(offerId);
+
+  await db.runTransaction(async (transaction) => {
+    const offerDoc = await transaction.get(offerRef);
+    if (!offerDoc.exists) {
+      throw new HttpsError("not-found", "Oferta nao encontrada.");
+    }
+
+    const offerData = offerDoc.data() ?? {};
+    if (offerData.sellerId !== user.uid) {
+      throw new HttpsError("permission-denied", "Voce nao pode retirar uma oferta que nao e sua.");
+    }
+    if (offerData.status !== "active") {
+      throw new HttpsError("failed-precondition", "Esta oferta nao esta mais ativa.");
+    }
+
+    transaction.update(offerRef, {status: "cancelled"});
+  });
+
+  return {data: {message: "Offer cancelled successfully"}};
+});

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/services/functions_service.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
 
@@ -8,8 +6,6 @@ class BackendService {
   factory BackendService() => _instance;
 
   final FirestoreService _firestoreService = FirestoreService();
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FunctionsService _functionsService = FunctionsService();
 
   BackendService._internal();
@@ -66,41 +62,11 @@ class BackendService {
   }
 
   Future<void> editP2POffer(String offerId, double price) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não logado');
-
-    final offerRef = _db.collection('p2p_offers').doc(offerId);
-    final offerDoc = await offerRef.get();
-    if (!offerDoc.exists) throw Exception('Oferta não encontrada');
-
-    final offerData = offerDoc.data()!;
-    if (offerData['sellerId'] != user.uid) {
-      throw Exception('Você só pode editar suas próprias ofertas');
-    }
-
-    await offerRef.update({
-      'price': price,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await _functionsService.editP2POffer(offerId, price);
   }
 
   Future<void> cancelP2POffer(String offerId) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('Usuário não logado');
-
-    final offerRef = _db.collection('p2p_offers').doc(offerId);
-    final offerDoc = await offerRef.get();
-    if (!offerDoc.exists) throw Exception('Oferta não encontrada');
-
-    final offerData = offerDoc.data()!;
-    if (offerData['sellerId'] != user.uid) {
-      throw Exception('Você só pode cancelar suas próprias ofertas');
-    }
-
-    await offerRef.update({
-      'status': 'canceled',
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await _functionsService.cancelP2POffer(offerId);
   }
 
   Future<void> acceptP2POffer(String offerId, {double? acceptedPrice, String? buyerIdParam, String? negotiationId}) async {

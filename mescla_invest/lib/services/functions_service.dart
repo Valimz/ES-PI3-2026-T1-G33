@@ -38,6 +38,12 @@ class FunctionsService {
   Future<void> makeCounterOffer(String offerId, double proposedPrice) =>
       _call('makeCounterOffer', {'offerId': offerId, 'proposedPrice': proposedPrice});
 
+  Future<void> editP2POffer(String offerId, double price) =>
+      _call('editP2POffer', {'offerId': offerId, 'price': price});
+
+  Future<void> cancelP2POffer(String offerId) =>
+      _call('cancelP2POffer', {'offerId': offerId});
+
   Future<void> acceptP2POffer(
     String offerId, {
     double? acceptedPrice,
@@ -58,8 +64,26 @@ class FunctionsService {
   Future<void> registerNotificationToken(String token) =>
       _call('registerNotificationToken', {'token': token});
 
+  Future<Map<String, dynamic>> getGraphSummary() => _callForData('getGraphSummary', {});
+
+  Future<Map<String, dynamic>> getGraphHistory({String? startupName, String? type}) =>
+      _callForData('getGraphHistory', {
+        if (startupName != null) 'startupName': startupName,
+        if (type != null) 'type': type,
+      });
+
+  Future<Map<String, dynamic>> getGraphAsset(String startupName) =>
+      _callForData('getGraphAsset', {'startupName': startupName});
+
   Future<void> _call(String name, Map<String, dynamic> data) async {
     await _functions.httpsCallable(name).call(data);
+  }
+
+  Future<Map<String, dynamic>> _callForData(String name, Map<String, dynamic> data) async {
+    final result = await _functions.httpsCallable(name).call(data);
+    final payload = result.data;
+    final inner = (payload is Map && payload['data'] is Map) ? payload['data'] : payload;
+    return Map<String, dynamic>.from(inner as Map);
   }
 
   Future<double?> _negotiationPrice(String offerId, String? negotiationId) async {
