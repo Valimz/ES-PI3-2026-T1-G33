@@ -174,7 +174,7 @@ export const confirm2FA = functions.https.onRequest(async (req, res) => {
   }
 });
 
-// Endpoint: verificar token during login
+// Endpoint: verificar token during login (HTTP)
 export const verify2FA = functions.https.onRequest(async (req, res) => {
   try {
     const uid = req.headers['x-user-id'] as string;
@@ -240,4 +240,72 @@ export const verify2FA = functions.https.onRequest(async (req, res) => {
     res.status(500).json({error: 'Erro ao verificar 2FA'});
     return;
   }
+});
+
+// Callable: checa após o login se o usuário precisa completar 2FA
+export const postLoginCheck = functions.https.onCall(async (data: any, context: any) => {
+  if (!context || !context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Usuário precisa estar autenticado.');
+  }
+  const uid = context.auth.uid;
+  const userDoc = await db.collection('users').doc(uid).get();
+  const u = userDoc.data() || {};
+  const enabled = u['2fa_enabled'] === true;
+  if (!enabled) return {needs2FA: false};
+
+  // Se o usuário já passou 2FA recentemente, não pedir novamente (janela em minutos)
+  const lastPassed = u['2fa_last_passed_at'];
+  const windowMinutes = (process.env.TOTP_PASS_WINDOW_MINUTES ? parseInt(process.env.TOTP_PASS_WINDOW_MINUTES, 10) : 10);
+  if (lastPassed && lastPassed.toDate) {
+    const passedDate: Date = lastPassed.toDate();
+    const diff = (Date.now() - passedDate.getTime()) / 1000 / 60; // minutes
+    if (diff <= windowMinutes) {
+      return {needs2FA: false};
+    }
+  }
+  return {needs2FA: true};
+});
+
+// Callable: verificar token 2FA e marcar passagem (usado no fluxo de login)
+export const verify2FACall = functions.https.onCall(async (data: any, context: any) => {
+  if (!context || !context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Usuário precisa estar autenticado.');
+  }
+  const uid = context.auth.uid;
+  const token = (data && data.token) as string;
+  if (!token) throw new functions.https.HttpsError('invalid-argument', 'Token 2FA necessário.');
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  const u = userDoc.data() || {};
+  const secretEnc = u['2fa_secret_enc'];
+  if (!secretEnc) throw new functions.https.HttpsError('failed-precondition', '2FA não configurado.');
+
+  let secret: string;
+  try {
+    secret = decryptSecret(secretEnc);
+  } catch (e: any) {
+    console.error('Erro ao decifrar secret:', e?.message || e);
+    throw new functions.https.HttpsError('internal', 'Erro ao processar secret.');
+  }
+
+  const valid = speakeasy.totp.verify({secret, encoding: 'base32', token, window: 1});
+  if (valid) {
+    await db.collection('users').doc(uid).update({
+      '2fa_last_passed_at': admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return {success: true};
+  }
+
+  // verifica backup codes
+  const backupHashes: string[] = u['backup_codes_hashes'] || [];
+  for (let i = 0; i < backupHashes.length; i++) {
+    const hash = backupHashes[i];
+    if (await bcrypt.compare(token, hash)) {
+      backupHashes.splice(i, 1);
+      await db.collection('users').doc(uid).update({backup_codes_hashes: backupHashes, '2fa_last_passed_at': admin.firestore.FieldValue.serverTimestamp()});
+      return {success: true, usedBackupCode: true};
+    }
+  }
+
+  throw new functions.https.HttpsError('permission-denied', 'Token inválido');
 });
