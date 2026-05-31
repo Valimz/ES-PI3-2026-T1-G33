@@ -502,7 +502,7 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
       },
     );
   }
-
+}
 
 class _TransactionPoint {
   const _TransactionPoint({

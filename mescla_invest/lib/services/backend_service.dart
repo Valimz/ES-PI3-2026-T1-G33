@@ -108,14 +108,30 @@ class BackendService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        'startup': startup,
+        'startup': {
+          'name': startup['name']?.toString() ?? '',
+          'val': startup['val']?.toString() ?? '',
+          if (startup['id'] != null) 'id': startup['id']?.toString(),
+        },
         'amountToBuy': amountToBuy,
       }),
     );
 
     if (response.statusCode != 200) {
-      final errorMap = jsonDecode(response.body);
-      throw Exception(errorMap['error'] ?? "Erro no servidor ao comprar");
+      final errorMessage = _parseErrorBody(response.body, 'Erro no servidor ao comprar');
+      throw Exception(errorMessage);
+    }
+  }
+
+  String _parseErrorBody(String body, String fallback) {
+    try {
+      final errorMap = jsonDecode(body);
+      if (errorMap is Map && errorMap['error'] != null) {
+        return errorMap['error'].toString();
+      }
+      return body.isNotEmpty ? body : fallback;
+    } catch (_) {
+      return body.isNotEmpty ? body : fallback;
     }
   }
 
@@ -137,8 +153,8 @@ class BackendService {
     );
 
     if (response.statusCode != 200) {
-      final errorMap = jsonDecode(response.body);
-      throw Exception(errorMap['error'] ?? "Erro no servidor ao vender");
+      final errorMessage = _parseErrorBody(response.body, "Erro no servidor ao vender");
+      throw Exception(errorMessage);
     }
   }
 
@@ -162,9 +178,9 @@ class BackendService {
     );
 
     if (response.statusCode != 200) {
-      final errorMap = jsonDecode(response.body);
-      throw Exception(
-          errorMap['error'] ?? "Erro no servidor ao vender parcialmente");
+      final errorMessage = _parseErrorBody(
+          response.body, "Erro no servidor ao vender parcialmente");
+      throw Exception(errorMessage);
     }
   }
 
