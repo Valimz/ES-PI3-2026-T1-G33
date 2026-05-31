@@ -5,8 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
-import 'package:mescla_invest/core/config/app_config.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 
 /// Handler de background — deve ser top-level function
 @pragma('vm:entry-point')
@@ -26,8 +25,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  final String _baseUrl = AppConfig.apiBaseUrl;
+  final FunctionsService _functionsService = FunctionsService();
 
   bool _initialized = false;
 
@@ -101,32 +99,7 @@ class NotificationService {
       final user = _auth.currentUser;
       if (user == null) return;
 
-      // Salvar no Firestore diretamente
-      await _db
-          .collection('users')
-          .doc(user.uid)
-          .collection('tokens')
-          .doc(token)
-          .set({
-            'token': token,
-            'updatedAt': FieldValue.serverTimestamp(),
-            'platform': 'android',
-          });
-
-      // Também registrar no backend
-      try {
-        final idToken = await user.getIdToken();
-        await http.post(
-          Uri.parse('$_baseUrl/api/notifications/register-token'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $idToken',
-          },
-          body: jsonEncode({'token': token}),
-        );
-      } catch (e) {
-        debugPrint('⚠️ Erro ao registrar token no backend: $e');
-      }
+      await _functionsService.registerNotificationToken(token);
 
       debugPrint('✅ Token FCM registrado: ${token.substring(0, 20)}...');
     } catch (e) {
