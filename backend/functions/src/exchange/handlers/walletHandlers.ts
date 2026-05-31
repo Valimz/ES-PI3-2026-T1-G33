@@ -3,14 +3,7 @@ import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../startups/shared/firebase";
 import {requireAuthenticatedUser} from "../../startups/shared/auth";
 import {sendNotification} from "./notificationHandlers";
-
-const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace(".", ",")}`;
-
-const parseCurrency = (value: string) => {
-  const cleanValue = value.replace(/[^0-9,.-]/g, "").replace(",", ".");
-  const parsed = Number.parseFloat(cleanValue);
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
+import {walletRefFor, assetsCollectionFor, acquisitionsCollectionFor, formatCurrency, parseCurrency} from "../repositories/walletRepository";
 
 export const addFunds = onCall(async (request) => {
   const user = requireAuthenticatedUser(request);
@@ -20,7 +13,7 @@ export const addFunds = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Informe um valor valido para depositar.");
   }
 
-  const walletRef = db.collection("users").doc(user.uid).collection("wallet").doc("main");
+  const walletRef = walletRefFor(user.uid);
 
   await db.runTransaction(async (transaction) => {
     const walletDoc = await transaction.get(walletRef);
@@ -54,8 +47,8 @@ export const buyAsset = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Startup e amountToBuy sao obrigatorios.");
   }
 
-  const walletRef = db.collection("users").doc(user.uid).collection("wallet").doc("main");
-  const assetsCollection = db.collection("users").doc(user.uid).collection("assets");
+  const walletRef = walletRefFor(user.uid);
+  const assetsCollection = assetsCollectionFor(user.uid);
 
   await db.runTransaction(async (transaction) => {
     const walletDoc = await transaction.get(walletRef);
@@ -102,7 +95,7 @@ export const buyAsset = onCall(async (request) => {
       });
     }
 
-    const acquisitionRef = db.collection("users").doc(user.uid).collection("acquisitions").doc();
+    const acquisitionRef = acquisitionsCollectionFor(user.uid).doc();
     transaction.set(acquisitionRef, {
       type: "buy",
       title: `Compra: ${startup.name}`,
@@ -222,7 +215,7 @@ export const withdrawFunds = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'Informe um valor valido para saque.');
   }
 
-  const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
+  const walletRef = walletRefFor(user.uid);
 
   await db.runTransaction(async (transaction) => {
     const walletDoc = await transaction.get(walletRef);
@@ -237,7 +230,7 @@ export const withdrawFunds = onCall(async (request) => {
 
     transaction.update(walletRef, { balance: formatCurrency(currentBalance - amount) });
 
-    const acqRef = db.collection('users').doc(user.uid).collection('acquisitions').doc();
+    const acqRef = acquisitionsCollectionFor(user.uid).doc();
     transaction.set(acqRef, {
       type: 'withdraw',
       title: 'Retirada via Firebase Functions',
@@ -270,8 +263,8 @@ export const sellPartialAsset = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'Dados invalidos para venda parcial.');
   }
 
-  const walletRef = db.collection('users').doc(user.uid).collection('wallet').doc('main');
-  const assetRef = db.collection('users').doc(user.uid).collection('assets').doc(asset.id);
+  const walletRef = walletRefFor(user.uid);
+  const assetRef = assetsCollectionFor(user.uid).doc(asset.id);
 
   let soldAssetName = '';
   let soldAll = false;
@@ -320,7 +313,7 @@ export const sellPartialAsset = onCall(async (request) => {
       });
     }
 
-    const acqRef = db.collection('users').doc(user.uid).collection('acquisitions').doc();
+    const acqRef = acquisitionsCollectionFor(user.uid).doc();
     transaction.set(acqRef, {
       type: 'sell',
       title: `Venda: ${assetData.name}`,

@@ -2,14 +2,8 @@ import {onCall, HttpsError} from "firebase-functions/https";
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../startups/shared/firebase";
 import {requireAuthenticatedUser} from "../../startups/shared/auth";
-
-const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace(".", ",")}`;
-
-const parseCurrency = (value: string) => {
-  const cleanValue = value.replace(/[^0-9,.-]/g, "").replace(",", ".");
-  const parsed = Number.parseFloat(cleanValue);
-  return Number.isNaN(parsed) ? 0 : parsed;
-};
+import {p2pOffersCollection, p2pOfferRef, p2pNegotiationsCollection} from "../repositories/p2pRepository";
+import {formatCurrency, parseCurrency, assetsCollectionFor, walletRefFor} from "../repositories/walletRepository";
 
 export const createP2POffer = onCall(async (request) => {
   const user = requireAuthenticatedUser(request);
@@ -27,7 +21,7 @@ export const createP2POffer = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Cotas insuficientes.");
   }
 
-  await db.collection("p2p_offers").add({
+  await p2pOffersCollection().add({
     sellerId: user.uid,
     startupName: asset.name,
     quotas,
@@ -48,7 +42,7 @@ export const makeCounterOffer = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "offerId e proposedPrice sao obrigatorios.");
   }
 
-  await db.collection("p2p_offers").doc(String(offerId)).collection("negotiations").doc(user.uid).set({
+  await p2pNegotiationsCollection(offerId).doc(user.uid).set({
     buyerId: user.uid,
     proposedPrice,
     status: "pending",
@@ -69,7 +63,7 @@ export const acceptOffer = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "offerId e obrigatorio.");
   }
 
-  const offerRef = db.collection("p2p_offers").doc(String(offerId));
+  const offerRef = p2pOfferRef(offerId);
 
   await db.runTransaction(async (transaction) => {
     const offerDoc = await transaction.get(offerRef);
@@ -93,8 +87,8 @@ export const acceptOffer = onCall(async (request) => {
     const assetName = offerData.startupName;
     const quotas = offerData.quotas;
 
-    const buyerWalletRef = db.collection("users").doc(buyerId).collection("wallet").doc("main");
-    const sellerWalletRef = db.collection("users").doc(sellerId).collection("wallet").doc("main");
+    const buyerWalletRef = walletRefFor(buyerId);
+    const sellerWalletRef = walletRefFor(sellerId);
 
     const buyerWalletDoc = await transaction.get(buyerWalletRef);
     const sellerWalletDoc = await transaction.get(sellerWalletRef);
@@ -117,7 +111,7 @@ export const acceptOffer = onCall(async (request) => {
     transaction.update(buyerWalletRef, {balance: formatCurrency(buyerBalance - price)});
     transaction.update(sellerWalletRef, {balance: formatCurrency(sellerBalance + price)});
 
-    const sellerAssetsCollection = db.collection("users").doc(sellerId).collection("assets");
+    const sellerAssetsCollection = assetsCollectionFor(sellerId);
     const sellerAssetsQuery = await sellerAssetsCollection.where("name", "==", assetName).get();
     if (!sellerAssetsQuery.empty) {
       const sDoc = sellerAssetsQuery.docs[0];
@@ -138,7 +132,7 @@ export const acceptOffer = onCall(async (request) => {
       }
     }
 
-    const buyerAssetsCollection = db.collection("users").doc(buyerId).collection("assets");
+    const buyerAssetsCollection = assetsCollectionFor(buyerId);
     const buyerAssetsQuery = await buyerAssetsCollection.where("name", "==", assetName).get();
     if (!buyerAssetsQuery.empty) {
       const bDoc = buyerAssetsQuery.docs[0];
@@ -165,7 +159,7 @@ export const acceptOffer = onCall(async (request) => {
     transaction.update(offerRef, {status: "completed"});
 
     if (negotiationId) {
-      const negRef = db.collection("p2p_offers").doc(String(offerId)).collection("negotiations").doc(String(negotiationId));
+      const negRef = p2pNegotiationsCollection(offerId).doc(String(negotiationId));
       transaction.update(negRef, {status: "accepted"});
     }
   });
