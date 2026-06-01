@@ -1,14 +1,11 @@
-// Nome: Felipe Augusto dos Santos Silva
-// RA: 25003353
-
 import 'package:flutter/material.dart';
-import 'package:mescla_invest/features/portfolio/data/portfolio_mock_data.dart';
+import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/ativo_card_widget.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/filtro_ativos_widget.dart';
 import 'package:mescla_invest/features/portfolio/presentation/widgets/resumo_portfolio_header.dart';
+import 'package:mescla_invest/services/firestore_service.dart';
 
-// Tela principal da carteira com resumo consolidado e lista de ativos.
 class PortfolioPage extends StatefulWidget {
   const PortfolioPage({super.key});
 
@@ -17,110 +14,189 @@ class PortfolioPage extends StatefulWidget {
 }
 
 class _PortfolioPageState extends State<PortfolioPage> {
-  FiltroAtivo _filtroSelecionado = FiltroAtivo.todos;
+  FiltroStartup _filtroSelecionado = FiltroStartup.todos;
+
+  late final Stream<List<Map<String, dynamic>>> _startupsStream;
+  late final Stream<List<Map<String, dynamic>>> _assetsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _startupsStream = FirestoreService().getStartups();
+    _assetsStream = FirestoreService().getUserAssets();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Recalcula os indicadores a partir do filtro ativo para manter o resumo coerente.
-    final ativosFiltrados = _filtrarAtivos(mockPortfolio, _filtroSelecionado);
-    final valorTotal = _valorTotalCarteira(ativosFiltrados);
-    final variacaoReais = _variacaoTotalEmReais(ativosFiltrados);
-    final variacaoPercentual = _variacaoTotalPercentual(
-      valorTotal,
-      variacaoReais,
-    );
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Portfólio'), centerTitle: true),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ResumoPortfolioHeader(
-                valorTotal: valorTotal,
-                variacaoEmReais: variacaoReais,
-                variacaoPercentual: variacaoPercentual,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Filtrar ativos',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              FiltroAtivosWidget(
-                selecionado: _filtroSelecionado,
-                onSelecionar: (filtro) {
-                  setState(() => _filtroSelecionado = filtro);
-                },
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ativosFiltrados.isEmpty
-                    ? const Center(
-                        child: Text('Nenhum ativo para o filtro selecionado.'),
-                      )
-                    : ListView.separated(
-                        itemCount: ativosFiltrados.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final ativo = ativosFiltrados[index];
-                          return AtivoCardWidget(ativo: ativo);
-                        },
-                      ),
-              ),
-            ],
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Meus Investimentos',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
           ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _startupsStream,
+          builder: (context, startupsSnapshot) {
+            return StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _assetsStream,
+              builder: (context, assetsSnapshot) {
+                if (startupsSnapshot.connectionState ==
+                        ConnectionState.waiting ||
+                    assetsSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final startups = startupsSnapshot.data ?? [];
+                final assets = assetsSnapshot.data ?? [];
+
+                // Join: só mostra startups em que o usuário tem posição (quotas > 0)
+                final investimentos = startups
+                    .map((startup) {
+                      final assetDoc = assets.cast<Map<String, dynamic>?>().firstWhere(
+                            (a) => a?['name'] == startup['name'],
+                            orElse: () => null,
+                          );
+
+                      if (assetDoc == null) return null;
+
+                      final amountStr =
+                          assetDoc['amount']?.toString().split(' ').first ??
+                              '0';
+                      final quantidade = double.tryParse(
+                              amountStr.replaceAll(',', '.')) ??
+                          0.0;
+                      if (quantidade <= 0) return null;
+
+                      return InvestimentoModel.fromFirestore(startup,
+                          assetDoc: assetDoc);
+                    })
+                    .whereType<InvestimentoModel>()
+                    .toList();
+
+                final filtrados =
+                    _filtrarStartups(investimentos, _filtroSelecionado);
+                final valorTotal = _valorTotal(filtrados);
+                final variacaoReais = _variacaoReais(filtrados);
+                final variacaoPercentual =
+                    _variacaoPercentual(valorTotal, variacaoReais);
+
+                return ListView(
+                  children: [
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ResumoPortfolioHeader(
+                        valorTotal: valorTotal,
+                        variacaoEmReais: variacaoReais,
+                        variacaoPercentual: variacaoPercentual,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('Filtrar por estágio'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: FiltroAtivosWidget(
+                        selecionado: _filtroSelecionado,
+                        onSelecionar: (filtro) =>
+                            setState(() => _filtroSelecionado = filtro),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('Seus Ativos'),
+                    const SizedBox(height: 4),
+                    if (filtrados.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            'Nenhum investimento para o filtro selecionado.',
+                            style: TextStyle(
+                              color: AppColors.textBody,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ...filtrados.map((inv) => Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 6),
+                            child: AtivoCardWidget(
+                              ativo: inv,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/analise',
+                                arguments: inv,
+                              ),
+                            ),
+                          )),
+                    const SizedBox(height: 32),
+                  ],
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 
-  List<InvestimentoModel> _filtrarAtivos(
-    List<InvestimentoModel> ativos,
-    FiltroAtivo filtro,
-  ) {
-    // Usa uma heurística simples no ticker para separar ações de cripto.
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  List<InvestimentoModel> _filtrarStartups(
+      List<InvestimentoModel> inv, FiltroStartup filtro) {
     switch (filtro) {
-      case FiltroAtivo.todos:
-        return ativos;
-      case FiltroAtivo.acoes:
-        return ativos.where((ativo) => _isAcao(ativo.ticker)).toList();
-      case FiltroAtivo.cripto:
-        return ativos.where((ativo) => _isCripto(ativo.ticker)).toList();
+      case FiltroStartup.todos:
+        return inv;
+      case FiltroStartup.nova:
+        return inv
+            .where((i) => i.estagio == EstagioStartup.nova)
+            .toList();
+      case FiltroStartup.emOperacao:
+        return inv
+            .where((i) => i.estagio == EstagioStartup.emOperacao)
+            .toList();
+      case FiltroStartup.emExpansao:
+        return inv
+            .where((i) => i.estagio == EstagioStartup.emExpansao)
+            .toList();
     }
   }
 
-  bool _isCripto(String ticker) {
-    return !RegExp(r'\d').hasMatch(ticker) && ticker.length <= 4;
-  }
+  double _valorTotal(List<InvestimentoModel> inv) => inv.fold(
+      0, (acc, i) => acc + (i.posicao.quantidade * i.posicao.valorAtual));
 
-  bool _isAcao(String ticker) {
-    return RegExp(r'\d').hasMatch(ticker);
-  }
+  double _variacaoReais(List<InvestimentoModel> inv) =>
+      inv.fold(0, (acc, i) => acc + i.variacao.variacaoEmReais);
 
-  double _valorTotalCarteira(List<InvestimentoModel> ativos) {
-    return ativos.fold(
-      0,
-      (acumulado, ativo) =>
-          acumulado + (ativo.posicao.quantidade * ativo.posicao.valorAtual),
-    );
-  }
-
-  double _variacaoTotalEmReais(List<InvestimentoModel> ativos) {
-    return ativos.fold(
-      0,
-      (acumulado, ativo) => acumulado + ativo.variacao.variacaoEmReais,
-    );
-  }
-
-  double _variacaoTotalPercentual(double valorTotal, double variacaoReais) {
-    // Evita divisão por zero quando ainda não há base de cálculo.
+  double _variacaoPercentual(double valorTotal, double variacaoReais) {
     final base = valorTotal - variacaoReais;
-    if (base == 0) {
-      return 0;
-    }
+    if (base == 0) return 0;
     return (variacaoReais / base) * 100;
   }
 }

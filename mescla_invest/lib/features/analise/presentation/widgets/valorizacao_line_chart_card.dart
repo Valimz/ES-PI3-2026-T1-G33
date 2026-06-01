@@ -10,10 +10,12 @@ class ValorizacaoLineChartCard extends StatelessWidget {
     super.key,
     required this.pontos,
     required this.isPositiva,
+    required this.titulo,
   });
 
   final List<double> pontos;
   final bool isPositiva;
+  final String titulo;
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +40,7 @@ class ValorizacaoLineChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Valorização da moeda',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(titulo, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SizedBox(
             height: 260,

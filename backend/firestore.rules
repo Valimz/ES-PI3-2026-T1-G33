@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Dados pessoais do usuário e todas as suas subcoleções (carteira, ativos,
+    // aquisições): somente o próprio usuário pode ler e escrever.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Startups: qualquer usuário autenticado pode ler.
+    // A escrita no documento é permitida a autenticados porque o catálogo e o
+    // FAQ (campo `faq`) são alimentados pelo cliente; as operações financeiras
+    // continuam protegidas nas Cloud Functions.
+    match /startups/{startupId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+
+      // Subcoleção de investidores: leitura restrita ao próprio usuário.
+      // Escrita apenas pelo sistema (Cloud Functions via Admin SDK).
+      match /investors/{userId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
+      // Demais subcoleções (questions, priceHistory) são mantidas apenas pelas
+      // Cloud Functions; o cliente não acessa diretamente.
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // Ofertas P2P: qualquer usuário autenticado pode ler;
+    // apenas o dono (sellerId) pode criar/atualizar/deletar a sua oferta.
+    match /p2p_offers/{offerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.sellerId == request.auth.uid;
+
+      // Negociações/contrapropostas: leitura para autenticados; escrita só pelo sistema.
+      match /{document=**} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+  }
+}

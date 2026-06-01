@@ -1,19 +1,16 @@
-// Nome: Felipe Augusto dos Santos Silva
-// RA: 25003353
-
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/core/theme/app_theme.dart';
 
-enum FiltroAtivo {
+enum FiltroStartup {
   todos('Todos'),
-  acoes('Ações'),
-  cripto('Cripto');
+  nova('Nova'),
+  emOperacao('Em operação'),
+  emExpansao('Em expansão');
 
-  const FiltroAtivo(this.label);
-
+  const FiltroStartup(this.label);
   final String label;
 }
 
-// Barra de filtros para alternar o tipo de ativo exibido na carteira.
 class FiltroAtivosWidget extends StatelessWidget {
   const FiltroAtivosWidget({
     super.key,
@@ -21,23 +18,52 @@ class FiltroAtivosWidget extends StatelessWidget {
     required this.onSelecionar,
   });
 
-  final FiltroAtivo selecionado;
-  final ValueChanged<FiltroAtivo> onSelecionar;
+  final FiltroStartup selecionado;
+  final ValueChanged<FiltroStartup> onSelecionar;
 
   @override
   Widget build(BuildContext context) {
-    // Renderiza os filtros de forma compacta para caber em telas menores.
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: FiltroAtivo.values
-          .map(
-            (filtro) => ChoiceChip(
-              label: Text(filtro.label),
-              selected: selecionado == filtro,
-              onSelected: (_) => onSelecionar(filtro),
-            ),
-          )
+      children: FiltroStartup.values
+          .map((filtro) {
+            final isSelected = selecionado == filtro;
+            return GestureDetector(
+              onTap: () => onSelecionar(filtro),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : Colors.grey.shade300,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Text(
+                  filtro.label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.textBody,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            );
+          })
           .toList(),
     );
   }

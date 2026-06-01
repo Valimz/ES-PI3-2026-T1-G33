@@ -1,9 +1,6 @@
-// Nome: Felipe Augusto dos Santos Silva
-// RA: 25003353
-
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/core/theme/app_theme.dart';
 
-// Exibe o valor total da carteira e a variação consolidada.
 class ResumoPortfolioHeader extends StatelessWidget {
   const ResumoPortfolioHeader({
     super.key,
@@ -18,51 +15,63 @@ class ResumoPortfolioHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Define a cor do destaque de acordo com o resultado consolidado da carteira.
     final isPositiva = variacaoEmReais >= 0;
-    final corVariacao = isPositiva
-        ? const Color(0xFF166534)
-        : const Color(0xFF991B1B);
+    final corVariacao = isPositiva ? AppColors.positive : AppColors.negative;
     final sinal = isPositiva ? '+' : '';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0E7490), Color(0xFF1D4ED8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Carteira total',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             _formatarMoeda(valorTotal),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(
-              '$sinal${_formatarMoeda(variacaoEmReais)} '
-              '($sinal${variacaoPercentual.toStringAsFixed(2)}%)',
-              style: TextStyle(color: corVariacao, fontWeight: FontWeight.w700),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPositiva ? Icons.trending_up : Icons.trending_down,
+                  color: AppColors.accent,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$sinal${_formatarMoeda(variacaoEmReais)} '
+                  '($sinal${variacaoPercentual.toStringAsFixed(2)}%)',
+                  style: TextStyle(
+                    color: isPositiva ? AppColors.accent : const Color(0xFFFCA5A5),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -71,8 +80,9 @@ class ResumoPortfolioHeader extends StatelessWidget {
   }
 
   String _formatarMoeda(double valor) {
-    // Formata com padrão brasileiro sem depender de pacote extra.
-    final valorAbsoluto = valor.abs().toStringAsFixed(2).replaceAll('.', ',');
-    return 'R\$ $valorAbsoluto';
+    final isNegativo = valor < 0;
+    final valorAbsoluto =
+        valor.abs().toStringAsFixed(2).replaceAll('.', ',');
+    return '${isNegativo ? '-' : ''}R\$ $valorAbsoluto';
   }
 }
