@@ -2,9 +2,10 @@ import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { db, auth } from './firebaseAdmin';
 import * as dotenv from 'dotenv';
+import path from 'path';
 import app from './app';
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -58,6 +59,6 @@ io.on('connection', (socket: Socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+httpServer.listen(PORT as number, '0.0.0.0', () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT} (0.0.0.0)`);
 });

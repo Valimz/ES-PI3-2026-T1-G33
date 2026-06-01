@@ -2,7 +2,7 @@ import * as admin from 'firebase-admin';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Para fins de desenvolvimento local, o arquivo serviceAccount.json deve ser gerado no Firebase Console.
 // Coloque ele na raiz do backend (backend/serviceAccount.json)
