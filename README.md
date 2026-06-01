@@ -56,12 +56,21 @@ VS Code ou Android Studio.
 
 ```text
 ES-PI3-2026-T1-G33/
-├── backend/            
-│   ├── src/
-│   ├── package.json
-│   └── .env.exemplo
-├── mobile/             
+├── backend/                  # Cloud Functions + configuração do Firebase
+│   ├── functions/            # Código-fonte das Functions (TypeScript)
+│   │   ├── src/
+│   │   └── package.json
+│   ├── scripts/              # Scripts de testes e2e
+│   ├── firebase.json
+│   ├── firestore.rules
+│   ├── firestore.indexes.json
+│   ├── storage.rules
+│   └── package.json
+├── mescla_invest/            # Aplicativo Flutter (mobile/web/desktop)
+│   ├── android/
+│   ├── ios/
 │   ├── lib/
+│   ├── web/
 │   └── pubspec.yaml
 └── README.md
 ```
@@ -108,11 +117,11 @@ FIREBASE_CLIENT_EMAIL=insira_aqui_seu_client_email
 
 ### 4. Iniciando o Aplicativo (Mobile)
 
-Com o backend rodando, abra um novo terminal para compilar e executar o frontend em Flutter.
+Abra um novo terminal para compilar e executar o frontend em Flutter.
 
 ```bash
 # Vá para a pasta do aplicativo
-cd mobile
+cd mescla_invest
 
 # Atualize e baixe os pacotes do Dart/Flutter
 flutter pub get
@@ -120,9 +129,15 @@ flutter pub get
 # Liste os emuladores ou aparelhos físicos disponíveis
 flutter devices
 
-# Inicie o app no dispositivo de sua escolha
-flutter run
+# Inicie o app conectado ao Firebase real (produção)
+flutter run --release
 ```
+
+> **Importante:** use `flutter run --release` para rodar o app com os **dados reais do
+> Firebase**. O app só aponta para os emuladores locais em modo debug (`kDebugMode`);
+> em `--release` o `kDebugMode` é `false`, então ele se conecta diretamente ao projeto
+> Firebase de produção (Auth, Functions e Firestore reais). Use `flutter run` (debug)
+> apenas quando estiver com os emuladores ativos, conforme a seção abaixo.
 
 ## Executando com Firebase Emulator (desenvolvimento local)
 
