@@ -1,9 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/auth/presentation/pages/register_page.dart';
 import 'package:mescla_invest/features/home/presentation/pages/home_page.dart';
-import 'package:mescla_invest/services/firebase_auth_service.dart';
+import 'package:mescla_invest/features/mfa/presentation/pages/mfa_verify_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,10 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscureSenha = true;
-  bool _authFailed = false;
-
-  static const String _genericCredentialMsg =
-      'Email e/ou senha inválidos, tente novamente.';
 
   @override
   Widget build(BuildContext context) {
@@ -78,15 +74,10 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: Icon(Icons.email_outlined, size: 20),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty || _authFailed) {
-                      return _genericCredentialMsg;
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira seu e-mail';
                     }
                     return null;
-                  },
-                  onChanged: (_) {
-                    if (_authFailed) {
-                      setState(() => _authFailed = false);
-                    }
                   },
                 ),
 
@@ -111,15 +102,10 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty || _authFailed) {
-                      return _genericCredentialMsg;
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira sua senha';
                     }
                     return null;
-                  },
-                  onChanged: (_) {
-                    if (_authFailed) {
-                      setState(() => _authFailed = false);
-                    }
                   },
                 ),
 
@@ -143,40 +129,60 @@ class _LoginPageState extends State<LoginPage> {
 
                 ElevatedButton(
                   onPressed: () async {
-                    setState(() => _authFailed = false);
                     if (_formKey.currentState!.validate()) {
                       try {
-                        final authService = FirebaseAuthService();
-                        await authService.loginWithEmailAndPassword(
-                          _emailController.text,
-                          _passwordController.text,
+                        await FirebaseAuth.instance.signInWithEmailAndPassword(
+                          email: _emailController.text.trim(),
+                          password: _passwordController.text,
                         );
                         if (!context.mounted) return;
+
+                        // Login OK sem MFA → ir para o dashboard
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const HomePage()),
                         );
+                      } on FirebaseAuthMultiFactorException catch (e) {
+                        // MFA necessário! Redirecionar para tela de verificação TOTP
+                        if (!context.mounted) return;
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                MfaVerifyPage(resolver: e.resolver),
+                          ),
+                        );
                       } on FirebaseAuthException catch (e) {
                         if (!context.mounted) return;
+                        String message;
                         switch (e.code) {
-                          case 'wrong-password':
                           case 'user-not-found':
-                          case 'invalid-email':
+                          case 'wrong-password':
                           case 'invalid-credential':
-                            // Credencial inválida: marca os dois campos.
-                            setState(() => _authFailed = true);
-                            _formKey.currentState!.validate();
+                            message = 'Email ou senha inválidos.';
+                            break;
+                          case 'user-disabled':
+                            message = 'Esta conta foi desativada.';
+                            break;
+                          case 'too-many-requests':
+                            message =
+                                'Muitas tentativas. Tente novamente mais tarde.';
                             break;
                           default:
-                            // Erro de rede/servidor: mostra SnackBar.
-                            _showErrorSnackBar(_messageForAuthCode(e));
+                            message = e.message ?? 'Erro ao fazer login.';
                         }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(message)),
+                        );
                       } catch (e) {
-                        // Erros não relacionados à autenticação (ex.: Firestore).
                         if (!context.mounted) return;
-                        _showErrorSnackBar(
-                            'Não foi possível entrar. Tente novamente.');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(e
+                                  .toString()
+                                  .replaceAll('Exception: ', ''))),
+                        );
                       }
                     }
                   },
@@ -191,6 +197,40 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Text(
                     'Entrar',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Row(
+                  children: [
+                    Expanded(
+                        child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        "OU",
+                        style:
+                            TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      ),
+                    ),
+                    Expanded(
+                        child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.fingerprint),
+                  label: const Text("Entrar com Biometria"),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 56),
+                    side: const BorderSide(color: Color(0xFFE0E4EC)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    foregroundColor: AppColors.primary,
                   ),
                 ),
 
@@ -231,25 +271,6 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  String _messageForAuthCode(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'network-request-failed':
-        return 'Falha de conexão. Verifique sua internet e tente novamente.';
-      case 'too-many-requests':
-        return 'Muitas tentativas. Tente novamente mais tarde.';
-      case 'user-disabled':
-        return 'Esta conta foi desativada.';
-      default:
-        return 'Erro ao fazer login. Tente novamente.';
-    }
   }
 
   Widget _buildFieldLabel(String label) {
