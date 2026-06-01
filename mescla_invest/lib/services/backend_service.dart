@@ -53,8 +53,13 @@ class BackendService {
     await _functionsService.withdrawFunds(amountToWithdraw);
   }
 
-  Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
-    await _functionsService.createP2POffer(asset, price);
+  Future<void> createP2POffer(Map<String, dynamic> asset, double price,
+      {double? quotasToSell}) async {
+    if (quotasToSell != null && quotasToSell <= 0) {
+      throw Exception('Quantidade inválida para a oferta');
+    }
+    await _functionsService.createP2POffer(asset, price,
+        quotasToSell: quotasToSell);
   }
 
   Future<void> makeCounterOffer(String offerId, double proposedPrice) async {

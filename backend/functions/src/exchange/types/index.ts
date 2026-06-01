@@ -20,3 +20,4 @@ export {addFunds, buyAsset, sellAsset, withdrawFunds, sellPartialAsset} from "..
 export {createP2POffer, makeCounterOffer, acceptOffer, editP2POffer, cancelP2POffer} from "../handlers/p2pHandlers";
 export {getGraphSummary, getGraphHistory, getGraphAsset} from "../handlers/graphHandlers";
 export {registerNotificationToken, sendNotification} from "../handlers/notificationHandlers";
+export {recalculateTokenPrice, recalculateAllTokenPrices, scheduledTokenValuation, getTokenPriceHistory} from "../handlers/valuationHandlers";

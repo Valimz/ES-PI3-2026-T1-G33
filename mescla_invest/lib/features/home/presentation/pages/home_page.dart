@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 import 'package:mescla_invest/services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -66,12 +67,16 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Sair da Conta',
           ),
           const SizedBox(width: 8),
-          const CircleAvatar(
-            backgroundColor: AppColors.accent,
-            radius: 16,
-            child: Icon(Icons.person, size: 20, color: AppColors.primary),
+          IconButton(
+            tooltip: 'Perfil',
+            onPressed: () => Navigator.pushNamed(context, '/perfil'),
+            icon: const CircleAvatar(
+              backgroundColor: AppColors.accent,
+              radius: 16,
+              child: Icon(Icons.person, size: 20, color: AppColors.primary),
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -313,6 +318,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Semeia o catálogo via Cloud Function (IDs fixos) — fonte única no backend.
+  Future<void> _seedCatalog() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await FunctionsService().seedStartupCatalog();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Catálogo de startups criado!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erro ao criar catálogo: $e')),
+      );
+    }
+  }
+
   Widget _buildStartupList() {
     return SizedBox(
       height: 180,
@@ -332,7 +354,7 @@ class _HomePageState extends State<HomePage> {
           if (startups.isEmpty) {
             return Center(
               child: ElevatedButton(
-                onPressed: () => FirestoreService().seedInitialData(),
+                onPressed: _seedCatalog,
                 child: const Text("Criar Dados Iniciais no Firebase"),
               ),
             );

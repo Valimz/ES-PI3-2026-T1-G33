@@ -4,7 +4,42 @@ import {db} from "../../startups/shared/firebase";
 import {requireAuthenticatedUser} from "../shared/auth";
 import {sendNotification} from "./notificationHandlers";
 import {walletRefFor, assetsCollectionFor, acquisitionsCollectionFor, formatCurrency, parseCurrency} from "../repositories/walletRepository";
-import {removeUserPrivateQuestions, cancelOverCommittedP2POffers} from "../repositories/p2pRepository";
+import {removeUserPrivateQuestions} from "../repositories/p2pRepository";
+
+async function resolveStartupId(startup: {id?: string; name?: string}): Promise<string | null> {
+  if (startup?.id) {
+    return String(startup.id);
+  }
+  if (!startup?.name) {
+    return null;
+  }
+  const snapshot = await db.collection("startups").where("name", "==", startup.name).limit(1).get();
+  return snapshot.empty ? null : snapshot.docs[0].id;
+}
+
+async function upsertInvestor(startupId: string, uid: string, quotas: number): Promise<void> {
+  await db
+    .collection("startups")
+    .doc(startupId)
+    .collection("investors")
+    .doc(uid)
+    .set(
+      {
+        tokens: FieldValue.increment(quotas),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+}
+
+async function removeInvestor(startupId: string, uid: string): Promise<void> {
+  await db
+    .collection("startups")
+    .doc(startupId)
+    .collection("investors")
+    .doc(uid)
+    .delete();
+}
 
 export const addFunds = onCall(async (request) => {
   const user = requireAuthenticatedUser(request);
@@ -51,6 +86,8 @@ export const buyAsset = onCall(async (request) => {
   const walletRef = walletRefFor(user.uid);
   const assetsCollection = assetsCollectionFor(user.uid);
 
+  let purchasedQuotas = 0;
+
   await db.runTransaction(async (transaction) => {
     const walletDoc = await transaction.get(walletRef);
 
@@ -66,6 +103,7 @@ export const buyAsset = onCall(async (request) => {
 
     const startupPrice = parseCurrency(String(startup.val ?? "R$ 1,00"));
     const quotasToBuy = amountToBuy / (startupPrice > 0 ? startupPrice : 1);
+    purchasedQuotas = quotasToBuy;
     const prefix = ` ${String(startup.name).substring(0, 2).toUpperCase()}`;
 
     transaction.update(walletRef, {
@@ -106,6 +144,15 @@ export const buyAsset = onCall(async (request) => {
     });
   });
 
+  try {
+    const startupId = await resolveStartupId(startup);
+    if (startupId) {
+      await upsertInvestor(startupId, user.uid, purchasedQuotas);
+    }
+  } catch (investorErr) {
+    console.error("Falha ao registrar investidor apos compra:", investorErr);
+  }
+
   return {data: {message: "Asset purchased successfully"}};
 });
 
@@ -119,6 +166,8 @@ export const sellAsset = onCall(async (request) => {
 
   const walletRef = db.collection("users").doc(user.uid).collection("wallet").doc("main");
   const assetRef = db.collection("users").doc(user.uid).collection("assets").doc(asset.id);
+
+  let soldAssetName = "";
 
   await db.runTransaction(async (transaction) => {
     const walletDoc = await transaction.get(walletRef);
@@ -134,6 +183,7 @@ export const sellAsset = onCall(async (request) => {
 
     const currentBalance = parseCurrency(String(walletDoc.data()?.balance ?? "R$ 0,00"));
     const assetData = assetDoc.data() ?? {};
+    soldAssetName = String(assetData.name ?? asset.name ?? "");
     const currentAssetValue = parseCurrency(String(assetData.value ?? "R$ 0,00"));
     const quotasStr = assetData.amount?.toString() ?? "0 Cotas";
 
@@ -152,6 +202,15 @@ export const sellAsset = onCall(async (request) => {
       date: FieldValue.serverTimestamp(),
     });
   });
+
+  try {
+    const startupId = await resolveStartupId({name: soldAssetName});
+    if (startupId) {
+      await removeInvestor(startupId, user.uid);
+    }
+  } catch (investorErr) {
+    console.error("Falha ao remover investidor apos venda total:", investorErr);
+  }
 
   return {data: {message: "Asset sold successfully"}};
 });
@@ -278,15 +337,20 @@ export const sellPartialAsset = onCall(async (request) => {
     } catch (cleanupErr) {
       console.error("Falha ao limpar perguntas privadas apos venda parcial:", cleanupErr);
     }
+
+    try {
+      const startupId = await resolveStartupId({name: soldAssetName});
+      if (startupId) {
+        await removeInvestor(startupId, user.uid);
+      }
+    } catch (investorErr) {
+      console.error("Falha ao remover investidor apos zerar posicao:", investorErr);
+    }
   }
 
-  // Cancela ofertas P2P que excedem a posicao restante
-  let cancelledOffers = 0;
-  try {
-    cancelledOffers = await cancelOverCommittedP2POffers(soldAssetName || asset.name, user.uid, soldAll ? 0 : remainingQuotas);
-  } catch (offerErr) {
-    console.error("Falha ao cancelar ofertas P2P apos venda parcial:", offerErr);
-  }
+  // Nota: com escrow no balcao P2P, os tokens ofertados ja saem da carteira na
+  // criacao da oferta, entao a venda da posicao restante nunca conflita com
+  // ofertas ativas — nao e necessario cancelar ofertas aqui.
 
   // Notificacoes
   try {
@@ -298,19 +362,6 @@ export const sellPartialAsset = onCall(async (request) => {
     });
   } catch (e) {
     console.error("Erro ao notificar venda parcial:", e);
-  }
-
-  if (cancelledOffers > 0) {
-    try {
-      await sendNotification(user.uid, {
-        title: "Oferta P2P retirada",
-        body: `Sua oferta de ${asset.name || "startup"} foi retirada do mercado por falta de tokens disponiveis.`,
-        type: "p2p_offer",
-        data: {startupName: asset.name || ""},
-      });
-    } catch (e) {
-      console.error("Erro ao notificar cancelamento de ofertas:", e);
-    }
   }
 
   return {data: {message: "Asset partially sold successfully", soldAll}};

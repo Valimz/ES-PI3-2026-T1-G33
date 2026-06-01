@@ -7,6 +7,15 @@ import 'package:mescla_invest/features/analise/presentation/widgets/valorizacao_
 import 'package:mescla_invest/features/portfolio/models/investimento_model.dart';
 import 'package:mescla_invest/services/backend_service.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
+import 'package:mescla_invest/services/functions_service.dart';
+
+// Ponto da série histórica real retornado por getGraphAsset.
+class _PontoSerie {
+  const _PontoSerie({required this.data, required this.valor});
+
+  final DateTime data;
+  final double valor;
+}
 
 class AnaliseGraficosPage extends StatefulWidget {
   const AnaliseGraficosPage({super.key});
@@ -19,11 +28,80 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
   PeriodoAnalise _periodoSelecionado = PeriodoAnalise.mes;
   InvestimentoModel? _startup;
 
+  List<_PontoSerie> _serieReal = const [];
+  bool _carregandoSerie = true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _startup ??=
-        ModalRoute.of(context)?.settings.arguments as InvestimentoModel?;
+    if (_startup == null) {
+      _startup = ModalRoute.of(context)?.settings.arguments as InvestimentoModel?;
+      if (_startup != null) {
+        _carregarSerie();
+      } else {
+        _carregandoSerie = false;
+      }
+    }
+  }
+
+  // Busca a série histórica real da startup via Cloud Function getGraphAsset.
+  Future<void> _carregarSerie() async {
+    final nome = _startup?.nome;
+    if (nome == null) return;
+    setState(() => _carregandoSerie = true);
+    try {
+      final resposta = await FunctionsService().getGraphAsset(nome);
+      final series = resposta['series'];
+      final pontos = <_PontoSerie>[];
+      if (series is List) {
+        for (final item in series) {
+          if (item is Map) {
+            final dataStr = item['date']?.toString();
+            final valor = item['value'];
+            if (dataStr != null && valor is num) {
+              final data = DateTime.tryParse(dataStr);
+              if (data != null) {
+                pontos.add(_PontoSerie(data: data, valor: valor.toDouble()));
+              }
+            }
+          }
+        }
+      }
+      pontos.sort((a, b) => a.data.compareTo(b.data));
+      if (!mounted) return;
+      setState(() {
+        _serieReal = pontos;
+        _carregandoSerie = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _serieReal = const [];
+        _carregandoSerie = false;
+      });
+    }
+  }
+
+  // Pontos do período selecionado: usa a série real (filtrada por data) quando
+  // disponível; caso contrário recorre à série simulada local (startup nova).
+  List<double> _pontosDoPeriodo(InvestimentoModel startup) {
+    if (_serieReal.isNotEmpty) {
+      final inicio = _periodoSelecionado.inicioDoPeriodo();
+      final filtrados = _serieReal
+          .where((p) => !p.data.isBefore(inicio))
+          .map((p) => p.valor)
+          .toList();
+      if (filtrados.length >= 2) {
+        return filtrados;
+      }
+      if (_serieReal.length >= 2) {
+        return _serieReal.map((p) => p.valor).toList();
+      }
+    }
+    return SerieValorizacaoData.pontosPorPeriodo(
+      periodo: _periodoSelecionado,
+      startup: startup,
+    );
   }
 
   @override
@@ -31,15 +109,50 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
     final startup = _startup;
 
     if (startup == null) {
-      return const Scaffold(
-        body: Center(child: Text('Selecione uma startup no portfólio.')),
+      return Scaffold(
+        appBar: AppBar(
+            title: const Text('Análise do Token'), centerTitle: true),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.show_chart, size: 48, color: Color(0xFF94A3B8)),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'Selecione uma startup no portfólio para ver a análise.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacementNamed(context, '/portfolio');
+                  }
+                },
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Voltar ao portfólio'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
-    final pontos = SerieValorizacaoData.pontosPorPeriodo(
-      periodo: _periodoSelecionado,
-      startup: startup,
-    );
+    if (_carregandoSerie) {
+      return Scaffold(
+        appBar: AppBar(
+            title: const Text('Análise do Token'), centerTitle: true),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final pontos = _pontosDoPeriodo(startup);
     final valorAtual = pontos.last;
     final valorInicial = pontos.first;
     final variacao = valorInicial != 0
@@ -64,9 +177,11 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Dados baseados na série histórica simulada do token.',
-                style: TextStyle(color: Color(0xFF64748B)),
+              Text(
+                _serieReal.isNotEmpty
+                    ? 'Dados baseados na série histórica real do token.'
+                    : 'Dados baseados na série histórica simulada do token.',
+                style: const TextStyle(color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 16),
               _StartupResumoCard(startup: startup),
