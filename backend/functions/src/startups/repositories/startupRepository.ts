@@ -328,9 +328,33 @@ export async function seedDemoStartups(): Promise<string[]> {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, {merge: true});
+
+    // Ponto inicial de historico de preco, para os graficos de preco do token
+    // terem dados antes da primeira execucao do agendador de valorizacao.
+    const priceCents = priceCentsFromVal(data.val);
+    const historyRef = startupRef.collection("priceHistory").doc("seed-initial");
+    batch.set(historyRef, {
+      priceCents,
+      previousPriceCents: priceCents,
+      variationPercent: 0,
+      factors: {
+        demandScore: 0,
+        capitalScore: 0,
+        investorScore: 0,
+        stageFactor: 1,
+        noise: 0,
+      },
+      createdAt: FieldValue.serverTimestamp(),
+    }, {merge: true});
   }
 
   await batch.commit();
 
   return demoStartups.map((startup) => startup.id);
+}
+
+function priceCentsFromVal(val: unknown): number {
+  const raw = String(val ?? "0").replace(/[^0-9,.-]/g, "").replace(",", ".");
+  const parsed = Number.parseFloat(raw);
+  return Number.isNaN(parsed) ? 0 : Math.round(parsed * 100);
 }

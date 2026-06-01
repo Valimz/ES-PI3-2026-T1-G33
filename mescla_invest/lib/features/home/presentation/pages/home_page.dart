@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/core/widgets/app_bottom_nav.dart';
 import 'package:mescla_invest/services/firestore_service.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 import 'package:mescla_invest/services/notification_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -317,6 +318,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Semeia o catálogo via Cloud Function (IDs fixos) — fonte única no backend.
+  Future<void> _seedCatalog() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await FunctionsService().seedStartupCatalog();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Catálogo de startups criado!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erro ao criar catálogo: $e')),
+      );
+    }
+  }
+
   Widget _buildStartupList() {
     return SizedBox(
       height: 180,
@@ -336,7 +354,7 @@ class _HomePageState extends State<HomePage> {
           if (startups.isEmpty) {
             return Center(
               child: ElevatedButton(
-                onPressed: () => FirestoreService().seedInitialData(),
+                onPressed: _seedCatalog,
                 child: const Text("Criar Dados Iniciais no Firebase"),
               ),
             );

@@ -9,28 +9,82 @@ export const createP2POffer = onCall(async (request) => {
   const user = requireAuthenticatedUser(request);
   const asset = request.data?.asset;
   const price = request.data?.price;
+  const quotasToSell = request.data?.quotasToSell;
 
   if (!asset || !asset.name || typeof price !== "number" || price <= 0) {
     throw new HttpsError("invalid-argument", "Asset e price sao obrigatorios.");
   }
 
-  const quotasStr = asset.amount?.toString().split(" ")[0] ?? "0";
-  const quotas = Number.parseFloat(quotasStr.replace(",", ".")) || 0;
+  const assetsCollection = assetsCollectionFor(user.uid);
 
-  if (quotas <= 0) {
-    throw new HttpsError("failed-precondition", "Cotas insuficientes.");
+  // Resolve a referencia do ativo (o app envia o campo `id`).
+  let assetRef;
+  if (asset.id) {
+    assetRef = assetsCollection.doc(String(asset.id));
+  } else {
+    const found = await assetsCollection.where("name", "==", asset.name).limit(1).get();
+    if (found.empty) {
+      throw new HttpsError("not-found", "Ativo nao encontrado na carteira.");
+    }
+    assetRef = found.docs[0].ref;
   }
 
-  await p2pOffersCollection().add({
-    sellerId: user.uid,
-    startupName: asset.name,
-    quotas,
-    price,
-    status: "active",
-    createdAt: FieldValue.serverTimestamp(),
+  const result = await db.runTransaction(async (transaction) => {
+    const assetDoc = await transaction.get(assetRef);
+    if (!assetDoc.exists) {
+      throw new HttpsError("not-found", "Ativo nao encontrado na carteira.");
+    }
+
+    const data = assetDoc.data() ?? {};
+    const parts = String(data.amount ?? "0 Tokens").split(" ");
+    const totalQuotas = Number.parseFloat((parts[0] ?? "0").replace(",", ".")) || 0;
+    const unitLabel = parts.length >= 2 ? parts.slice(1).join(" ") : "Tokens";
+    const totalValue = parseCurrency(String(data.value ?? "R$ 0,00"));
+
+    if (totalQuotas <= 0) {
+      throw new HttpsError("failed-precondition", "Cotas insuficientes.");
+    }
+
+    // Quantidade a ofertar: por padrao, todos os tokens do ativo.
+    const quotas = typeof quotasToSell === "number" && quotasToSell > 0 ?
+      quotasToSell :
+      totalQuotas;
+
+    if (quotas > totalQuotas + 1e-9) {
+      throw new HttpsError("failed-precondition", "Quantidade maior do que os tokens disponiveis.");
+    }
+
+    // Escrow: os tokens ofertados saem da carteira agora e so voltam no cancelamento.
+    const escrowValue = totalValue * (quotas / totalQuotas);
+    const remaining = totalQuotas - quotas;
+
+    if (remaining <= 1e-6) {
+      transaction.delete(assetRef);
+    } else {
+      const newValue = totalValue - escrowValue;
+      transaction.update(assetRef, {
+        amount: `${remaining.toFixed(1).replace(".", ",")} ${unitLabel}`,
+        value: formatCurrency(newValue > 0 ? newValue : 0),
+      });
+    }
+
+    const offerRef = p2pOffersCollection().doc();
+    transaction.set(offerRef, {
+      sellerId: user.uid,
+      startupName: asset.name,
+      quotas,
+      price,
+      status: "active",
+      escrowed: true,
+      escrowValue,
+      unitLabel,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    return {offerId: offerRef.id};
   });
 
-  return {data: {message: "Offer created successfully"}};
+  return {data: {message: "Offer created successfully", offerId: result.offerId}};
 });
 
 export const makeCounterOffer = onCall(async (request) => {
@@ -111,24 +165,27 @@ export const acceptOffer = onCall(async (request) => {
     transaction.update(buyerWalletRef, {balance: formatCurrency(buyerBalance - price)});
     transaction.update(sellerWalletRef, {balance: formatCurrency(sellerBalance + price)});
 
-    const sellerAssetsCollection = assetsCollectionFor(sellerId);
-    const sellerAssetsQuery = await sellerAssetsCollection.where("name", "==", assetName).get();
-    if (!sellerAssetsQuery.empty) {
-      const sDoc = sellerAssetsQuery.docs[0];
-      const sData = sDoc.data();
-      const sQuotasStr = sData.amount?.toString().split(" ")[0] ?? "0";
-      const sQuotas = Number.parseFloat(sQuotasStr.replace(",", ".")) || 0;
+    // Ofertas escrowadas ja retiraram os tokens do vendedor na criacao; nao deduzir de novo.
+    if (offerData.escrowed !== true) {
+      const sellerAssetsCollection = assetsCollectionFor(sellerId);
+      const sellerAssetsQuery = await sellerAssetsCollection.where("name", "==", assetName).get();
+      if (!sellerAssetsQuery.empty) {
+        const sDoc = sellerAssetsQuery.docs[0];
+        const sData = sDoc.data();
+        const sQuotasStr = sData.amount?.toString().split(" ")[0] ?? "0";
+        const sQuotas = Number.parseFloat(sQuotasStr.replace(",", ".")) || 0;
 
-      if (sQuotas <= quotas) {
-        transaction.delete(sDoc.ref);
-      } else {
-        const prefix = sData.amount?.toString().split(" ").length === 2 ? ` ${sData.amount.toString().split(" ")[1]}` : " Cotas";
-        const sVal = parseCurrency(String(sData.value ?? "R$ 0,00"));
-        const newVal = sVal - (sVal * (quotas / sQuotas));
-        transaction.update(sDoc.ref, {
-          amount: `${(sQuotas - quotas).toFixed(1).replace(".", ",")}${prefix}`,
-          value: formatCurrency(newVal > 0 ? newVal : 0),
-        });
+        if (sQuotas <= quotas) {
+          transaction.delete(sDoc.ref);
+        } else {
+          const prefix = sData.amount?.toString().split(" ").length === 2 ? ` ${sData.amount.toString().split(" ")[1]}` : " Cotas";
+          const sVal = parseCurrency(String(sData.value ?? "R$ 0,00"));
+          const newVal = sVal - (sVal * (quotas / sQuotas));
+          transaction.update(sDoc.ref, {
+            amount: `${(sQuotas - quotas).toFixed(1).replace(".", ",")}${prefix}`,
+            value: formatCurrency(newVal > 0 ? newVal : 0),
+          });
+        }
       }
     }
 
@@ -220,6 +277,36 @@ export const cancelP2POffer = onCall(async (request) => {
     }
     if (offerData.status !== "active") {
       throw new HttpsError("failed-precondition", "Esta oferta nao esta mais ativa.");
+    }
+
+    // Devolve os tokens escrowados para a carteira do vendedor.
+    if (offerData.escrowed === true) {
+      const assetsCollection = assetsCollectionFor(user.uid);
+      const assetSnap = await transaction.get(
+        assetsCollection.where("name", "==", offerData.startupName).limit(1)
+      );
+      const quotas = Number(offerData.quotas) || 0;
+      const escrowValue = Number(offerData.escrowValue) || 0;
+      const unitLabel = String(offerData.unitLabel ?? "Tokens");
+
+      if (!assetSnap.empty) {
+        const aDoc = assetSnap.docs[0];
+        const aData = aDoc.data();
+        const parts = String(aData.amount ?? "0 Tokens").split(" ");
+        const curQuotas = Number.parseFloat((parts[0] ?? "0").replace(",", ".")) || 0;
+        const curValue = parseCurrency(String(aData.value ?? "R$ 0,00"));
+        transaction.update(aDoc.ref, {
+          amount: `${(curQuotas + quotas).toFixed(1).replace(".", ",")} ${unitLabel}`,
+          value: formatCurrency(curValue + escrowValue),
+        });
+      } else {
+        const newAssetRef = assetsCollection.doc();
+        transaction.set(newAssetRef, {
+          name: offerData.startupName,
+          amount: `${quotas.toFixed(1).replace(".", ",")} ${unitLabel}`,
+          value: formatCurrency(escrowValue),
+        });
+      }
     }
 
     transaction.update(offerRef, {status: "cancelled"});

@@ -1,12 +1,13 @@
 # ES-PI3-2026-T1-G33
 
 ## Integrantes
-
-• Cauã Bianchi Ferroni<br>
-• Felipe Augusto dos Santos Silva<br>
-• Leonardo Santiago Tenca<br>
-• Marina Hehnes Esposito<br>
-• Vinicius Valim de Vechi Cardoso
+| Nome | RA |
+|------|------|
+| Cauã Bianchi Ferroni | 25001552 |
+| Felipe Augusto dos Santos Silva | 25003353 |
+| Leonardo Santiago Tenca| 25000239 |
+| Marina Hehnes Esposito | 25000937 |
+| Vinicius Valim de Vechi Cardoso | 25000387 |
 
 ## Descrição
 

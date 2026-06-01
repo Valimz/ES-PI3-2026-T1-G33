@@ -143,9 +143,9 @@ export const getTokenPriceHistory = onCall(async (request) => {
   requireAuthenticatedUser(request);
 
   const startupId = request.data?.startupId;
-  const limit = typeof request.data?.limit === "number"
-    ? Math.min(Math.max(request.data.limit, 1), 365)
-    : 30;
+  const limit = typeof request.data?.limit === "number" ?
+    Math.min(Math.max(request.data.limit, 1), 365) :
+    30;
 
   if (typeof startupId !== "string" || startupId.trim().length === 0) {
     throw new HttpsError("invalid-argument", "Informe o startupId.");
@@ -199,14 +199,14 @@ async function processStartupValuation(startupId: string) {
   const startupData = startupDoc.data() as Record<string, unknown>;
   const startupName = String(startupData.name ?? "");
   const stage = String(startupData.stage ?? "nova");
-  const capitalAportado = typeof startupData.capitalAportado === "number"
-    ? startupData.capitalAportado
-    : 0;
-  const tokensEmitidos = typeof startupData.tokensEmitidos === "number"
-    ? startupData.tokensEmitidos
-    : typeof startupData.totalTokensIssued === "number"
-      ? startupData.totalTokensIssued
-      : 1;
+  const capitalAportado = typeof startupData.capitalAportado === "number" ?
+    startupData.capitalAportado :
+    0;
+  const tokensEmitidos = typeof startupData.tokensEmitidos === "number" ?
+    startupData.tokensEmitidos :
+    typeof startupData.totalTokensIssued === "number" ?
+      startupData.totalTokensIssued :
+      1;
 
   const currentPriceCents = extractCurrentPriceCents(startupData);
 
@@ -216,9 +216,9 @@ async function processStartupValuation(startupId: string) {
     getLastPriceEntry(startupId),
   ]);
 
-  const capitalPerToken = tokensEmitidos > 0
-    ? capitalAportado / tokensEmitidos
-    : 0;
+  const capitalPerToken = tokensEmitidos > 0 ?
+    capitalAportado / tokensEmitidos :
+    0;
 
   const basePriceCents = lastEntry?.priceCents ?? currentPriceCents;
 

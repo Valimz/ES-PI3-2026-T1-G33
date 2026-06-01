@@ -160,9 +160,9 @@ export async function updateInvestorAppreciation(
     }
 
     const variationPercent =
-      totalInvested > 0
-        ? ((totalCurrentValue - totalInvested) / totalInvested) * 100
-        : 0;
+      totalInvested > 0 ?
+        ((totalCurrentValue - totalInvested) / totalInvested) * 100 :
+        0;
 
     const sign = variationPercent >= 0 ? "+" : "";
     const formatted = `${sign} ${variationPercent

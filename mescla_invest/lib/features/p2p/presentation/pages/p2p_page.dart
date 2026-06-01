@@ -84,6 +84,12 @@ class _P2PPageState extends State<P2PPage>
     String? selectedAssetId;
     Map<String, dynamic>? selectedAssetDetails;
     final TextEditingController priceController = TextEditingController();
+    final TextEditingController quantityController = TextEditingController();
+
+    double availableQuotas(Map<String, dynamic>? asset) {
+      final amountStr = asset?['amount']?.toString().split(' ').first ?? '0';
+      return double.tryParse(amountStr.replaceAll(',', '.')) ?? 0.0;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -167,6 +173,21 @@ class _P2PPageState extends State<P2PPage>
                   ),
                   const SizedBox(height: 16),
                   TextField(
+                    controller: quantityController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: "Quantidade de tokens a ofertar",
+                      prefixIcon: const Icon(Icons.pie_chart_outline),
+                      helperText: selectedAssetDetails == null
+                          ? 'Deixe em branco para ofertar todos'
+                          : 'Disponível: ${availableQuotas(selectedAssetDetails).toStringAsFixed(1).replaceAll('.', ',')} — em branco oferta tudo',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
                     controller: priceController,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
@@ -191,30 +212,55 @@ class _P2PPageState extends State<P2PPage>
                       onPressed: () async {
                         final price = double.tryParse(
                             priceController.text.replaceAll(',', '.'));
-                        if (selectedAssetDetails != null &&
-                            price != null &&
-                            price > 0) {
-                          try {
-                            await BackendService()
-                                .createP2POffer(selectedAssetDetails!, price);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          "Oferta criada com sucesso!")));
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Erro: $e")));
-                            }
-                          }
-                        } else {
+                        if (selectedAssetDetails == null ||
+                            price == null ||
+                            price <= 0) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text(
                                       "Selecione um ativo e insira um preço válido")));
+                          return;
+                        }
+
+                        final disponivel =
+                            availableQuotas(selectedAssetDetails);
+                        final qtyText =
+                            quantityController.text.trim().replaceAll(',', '.');
+                        double? quotasToSell;
+                        if (qtyText.isNotEmpty) {
+                          quotasToSell = double.tryParse(qtyText);
+                          if (quotasToSell == null || quotasToSell <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        "Insira uma quantidade válida")));
+                            return;
+                          }
+                          if (quotasToSell > disponivel + 1e-9) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        "Quantidade maior do que o disponível")));
+                            return;
+                          }
+                        }
+
+                        try {
+                          await BackendService().createP2POffer(
+                              selectedAssetDetails!, price,
+                              quotasToSell: quotasToSell);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text("Oferta criada com sucesso!")));
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Erro: $e")));
+                          }
                         }
                       },
                       child: const Text("Publicar Oferta",

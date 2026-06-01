@@ -109,8 +109,38 @@ class _AnaliseGraficosPageState extends State<AnaliseGraficosPage> {
     final startup = _startup;
 
     if (startup == null) {
-      return const Scaffold(
-        body: Center(child: Text('Selecione uma startup no portfólio.')),
+      return Scaffold(
+        appBar: AppBar(
+            title: const Text('Análise do Token'), centerTitle: true),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.show_chart, size: 48, color: Color(0xFF94A3B8)),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'Selecione uma startup no portfólio para ver a análise.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacementNamed(context, '/portfolio');
+                  }
+                },
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Voltar ao portfólio'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 

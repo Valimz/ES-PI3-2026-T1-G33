@@ -32,8 +32,13 @@ class FunctionsService {
   Future<void> withdrawFunds(double amountToWithdraw) =>
       _call('withdrawFunds', {'amount': amountToWithdraw});
 
-  Future<void> createP2POffer(Map<String, dynamic> asset, double price) =>
-      _call('createP2POffer', {'asset': asset, 'price': price});
+  Future<void> createP2POffer(Map<String, dynamic> asset, double price,
+          {double? quotasToSell}) =>
+      _call('createP2POffer', {
+        'asset': asset,
+        'price': price,
+        if (quotasToSell != null) 'quotasToSell': quotasToSell,
+      });
 
   Future<void> makeCounterOffer(String offerId, double proposedPrice) =>
       _call('makeCounterOffer', {'offerId': offerId, 'proposedPrice': proposedPrice});
@@ -74,6 +79,13 @@ class FunctionsService {
 
   Future<Map<String, dynamic>> getGraphAsset(String startupName) =>
       _callForData('getGraphAsset', {'startupName': startupName});
+
+  // Popula o catálogo de startups (IDs fixos) — fonte única no backend.
+  // Em produção exige seedKey; no emulador roda sem chave.
+  Future<Map<String, dynamic>> seedStartupCatalog({String? seedKey}) =>
+      _callForData('seedStartupCatalog', {
+        if (seedKey != null) 'seedKey': seedKey,
+      });
 
   Future<void> _call(String name, Map<String, dynamic> data) async {
     await _functions.httpsCallable(name).call(data);

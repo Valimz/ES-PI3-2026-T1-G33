@@ -4,7 +4,7 @@ import {db} from "../../startups/shared/firebase";
 import {requireAuthenticatedUser} from "../shared/auth";
 import {sendNotification} from "./notificationHandlers";
 import {walletRefFor, assetsCollectionFor, acquisitionsCollectionFor, formatCurrency, parseCurrency} from "../repositories/walletRepository";
-import {removeUserPrivateQuestions, cancelOverCommittedP2POffers} from "../repositories/p2pRepository";
+import {removeUserPrivateQuestions} from "../repositories/p2pRepository";
 
 async function resolveStartupId(startup: {id?: string; name?: string}): Promise<string | null> {
   if (startup?.id) {
@@ -348,13 +348,9 @@ export const sellPartialAsset = onCall(async (request) => {
     }
   }
 
-  // Cancela ofertas P2P que excedem a posicao restante
-  let cancelledOffers = 0;
-  try {
-    cancelledOffers = await cancelOverCommittedP2POffers(soldAssetName || asset.name, user.uid, soldAll ? 0 : remainingQuotas);
-  } catch (offerErr) {
-    console.error("Falha ao cancelar ofertas P2P apos venda parcial:", offerErr);
-  }
+  // Nota: com escrow no balcao P2P, os tokens ofertados ja saem da carteira na
+  // criacao da oferta, entao a venda da posicao restante nunca conflita com
+  // ofertas ativas — nao e necessario cancelar ofertas aqui.
 
   // Notificacoes
   try {
@@ -366,19 +362,6 @@ export const sellPartialAsset = onCall(async (request) => {
     });
   } catch (e) {
     console.error("Erro ao notificar venda parcial:", e);
-  }
-
-  if (cancelledOffers > 0) {
-    try {
-      await sendNotification(user.uid, {
-        title: "Oferta P2P retirada",
-        body: `Sua oferta de ${asset.name || "startup"} foi retirada do mercado por falta de tokens disponiveis.`,
-        type: "p2p_offer",
-        data: {startupName: asset.name || ""},
-      });
-    } catch (e) {
-      console.error("Erro ao notificar cancelamento de ofertas:", e);
-    }
   }
 
   return {data: {message: "Asset partially sold successfully", soldAll}};
