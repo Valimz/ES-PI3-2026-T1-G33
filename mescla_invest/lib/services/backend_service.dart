@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 
 class BackendService {
   static final BackendService _instance = BackendService._internal();
@@ -142,7 +143,17 @@ class BackendService {
   }
 
   // --- P2P ---
-  Future<void> createP2POffer(Map<String, dynamic> asset, double price) async {
+  Future<void> createP2POffer(
+    Map<String, dynamic> asset,
+    double price, {
+    double? quotasToSell,
+  }) async {
+    // Fluxos novos de P2P (com venda parcial) rodam via Cloud Functions.
+    if (quotasToSell != null) {
+      await FunctionsService().createP2POffer(asset, price, quotasToSell: quotasToSell);
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("Usuário não logado");
 
@@ -164,6 +175,22 @@ class BackendService {
       final errorMap = jsonDecode(response.body);
       throw Exception(errorMap['error'] ?? "Erro no servidor ao criar oferta");
     }
+  }
+
+  Future<void> withdrawFunds(double amountToWithdraw) {
+    return FunctionsService().withdrawFunds(amountToWithdraw);
+  }
+
+  Future<void> sellPartialAsset(Map<String, dynamic> asset, double quotasToSell) {
+    return FunctionsService().sellPartialAsset(asset, quotasToSell);
+  }
+
+  Future<void> editP2POffer(String offerId, double price) {
+    return FunctionsService().editP2POffer(offerId, price);
+  }
+
+  Future<void> cancelP2POffer(String offerId) {
+    return FunctionsService().cancelP2POffer(offerId);
   }
 
   Future<void> makeCounterOffer(String offerId, double proposedPrice) async {

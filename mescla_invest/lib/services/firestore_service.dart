@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 
 /// Acesso de LEITURA ao Firestore e dados de FAQ.
 ///
@@ -10,6 +11,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> seedInitialData() async {
+    await FunctionsService().seedStartupCatalog();
+  }
 
   // Stream para listar todas as startups
   Stream<List<Map<String, dynamic>>> getStartups() {
