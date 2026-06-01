@@ -42,13 +42,13 @@ Future<void> _configureLocalEmulators() async {
 
 String _firebaseEmulatorHost() {
   if (kIsWeb) {
-    return 'localhost';
+    return '127.0.0.1';
   }
 
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       return '10.0.2.2';
     default:
-      return 'localhost';
+      return '127.0.0.1';
   }
 }

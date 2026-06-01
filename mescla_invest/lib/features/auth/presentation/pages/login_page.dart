@@ -4,6 +4,7 @@ import 'package:mescla_invest/core/theme/app_theme.dart';
 import 'package:mescla_invest/features/auth/presentation/pages/register_page.dart';
 import 'package:mescla_invest/features/home/presentation/pages/home_page.dart';
 import 'package:mescla_invest/services/firebase_auth_service.dart';
+import 'package:mescla_invest/services/functions_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscureSenha = true;
   bool _authFailed = false;
+  bool _isSubmitting = false;
 
   static const String _genericCredentialMsg =
       'Email e/ou senha inválidos, tente novamente.';
@@ -142,9 +144,12 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 30),
 
                 ElevatedButton(
-                  onPressed: () async {
+                  onPressed: _isSubmitting
+                      ? null
+                      : () async {
                     setState(() => _authFailed = false);
                     if (_formKey.currentState!.validate()) {
+                      setState(() => _isSubmitting = true);
                       try {
                         final authService = FirebaseAuthService();
                         await authService.loginWithEmailAndPassword(
@@ -152,11 +157,18 @@ class _LoginPageState extends State<LoginPage> {
                           _passwordController.text,
                         );
                         if (!context.mounted) return;
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const HomePage()),
-                        );
+                        final functionsService = FunctionsService();
+                        final needs2FA = await functionsService.needsTwoFactor();
+                        if (!context.mounted) return;
+                        if (needs2FA) {
+                          Navigator.pushReplacementNamed(context, '/mfa');
+                        } else {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const HomePage()),
+                          );
+                        }
                       } on FirebaseAuthException catch (e) {
                         if (!context.mounted) return;
                         switch (e.code) {
@@ -177,6 +189,10 @@ class _LoginPageState extends State<LoginPage> {
                         if (!context.mounted) return;
                         _showErrorSnackBar(
                             'Não foi possível entrar. Tente novamente.');
+                      } finally {
+                        if (mounted) {
+                          setState(() => _isSubmitting = false);
+                        }
                       }
                     }
                   },
@@ -188,10 +204,17 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Entrar',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Entrar',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                 ),
 
                 const SizedBox(height: 30),

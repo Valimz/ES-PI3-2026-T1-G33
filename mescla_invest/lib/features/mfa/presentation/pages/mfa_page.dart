@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mescla_invest/features/mfa/presentation/widgets/form_mfa.dart';
 
 class MfaPage extends StatelessWidget {
   const MfaPage({super.key});
@@ -8,12 +7,18 @@ class MfaPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Ativar código de segurança'),
-          centerTitle: true),
+        title: const Text('Autenticação em duas etapas'),
+        centerTitle: true,
+      ),
       body: const SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24),
-          child: FormMfa(),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'A tela de 2FA será integrada pelo time na próxima etapa.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       ),
     );

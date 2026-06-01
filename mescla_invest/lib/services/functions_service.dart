@@ -1,6 +1,12 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+
+import '../firebase_options.dart';
 
 class FunctionsService {
   static final FunctionsService _instance = FunctionsService._internal();
@@ -8,6 +14,7 @@ class FunctionsService {
 
   final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'southamerica-east1');
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _emulatorConfigured = false;
 
@@ -64,6 +71,40 @@ class FunctionsService {
   Future<void> registerNotificationToken(String token) =>
       _call('registerNotificationToken', {'token': token});
 
+  Future<bool> needsTwoFactor() async {
+    final result = await _functions.httpsCallable('postLoginCheck').call();
+    final payload = result.data;
+    final data = payload is Map && payload['data'] is Map ? payload['data'] : payload;
+    return data is Map && data['needs2FA'] == true;
+  }
+
+  Future<void> verifyTwoFactor(String token) =>
+      _call('verify2FACall', {'token': token});
+
+  Future<Map<String, dynamic>> requestSmsTwoFactorCode() async {
+    final response = await _post2FAFunction('requestSms2FA', {});
+    return response;
+  }
+
+  Future<Map<String, dynamic>> requestEmailTwoFactorCode() async {
+    final response = await _post2FAFunction('requestEmail2FA', {});
+    return response;
+  }
+
+  Future<Map<String, dynamic>> regenerateBackupCodes() async {
+    final response = await _post2FAFunction('regenerateBackupCodes', {});
+    return response;
+  }
+
+  Future<Map<String, dynamic>> startTwoFactorEnrollment() async {
+    final response = await _post2FAFunction('enroll2FA', {});
+    return response;
+  }
+
+  Future<void> confirmTwoFactorEnrollment(String token) async {
+    await _post2FAFunction('confirm2FA', {'token': token});
+  }
+
   Future<Map<String, dynamic>> getGraphSummary() => _callForData('getGraphSummary', {});
 
   Future<Map<String, dynamic>> getGraphHistory({String? startupName, String? type}) =>
@@ -77,6 +118,36 @@ class FunctionsService {
 
   Future<void> _call(String name, Map<String, dynamic> data) async {
     await _functions.httpsCallable(name).call(data);
+  }
+
+  Future<Map<String, dynamic>> _post2FAFunction(
+    String name,
+    Map<String, dynamic> body,
+  ) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw StateError('Usuário precisa estar autenticado para 2FA.');
+    }
+
+    final response = await http.post(
+      Uri.parse(_twoFactorUrl(name)),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=utf-8',
+        'x-user-id': user.uid,
+      },
+      body: jsonEncode(body),
+    );
+
+    final decoded = jsonDecode(response.body);
+    final payload = decoded is Map<String, dynamic>
+        ? decoded
+        : <String, dynamic>{'raw': decoded};
+
+    if (response.statusCode >= 400) {
+      throw Exception(payload['error']?.toString() ?? 'Erro ao executar 2FA.');
+    }
+
+    return payload;
   }
 
   Future<Map<String, dynamic>> _callForData(String name, Map<String, dynamic> data) async {
@@ -103,14 +174,24 @@ class FunctionsService {
 
   String _firebaseEmulatorHost() {
     if (kIsWeb) {
-      return 'localhost';
+      return '127.0.0.1';
     }
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return '10.0.2.2';
       default:
-        return 'localhost';
+        return '127.0.0.1';
     }
+  }
+
+  String _twoFactorUrl(String functionName) {
+    final projectId = DefaultFirebaseOptions.currentPlatform.projectId;
+    if (kDebugMode) {
+      final host = _firebaseEmulatorHost();
+      return 'http://$host:5001/$projectId/southamerica-east1/$functionName';
+    }
+
+    return 'https://southamerica-east1-$projectId.cloudfunctions.net/$functionName';
   }
 }
