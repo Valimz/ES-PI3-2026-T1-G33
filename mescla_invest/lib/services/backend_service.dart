@@ -264,5 +264,98 @@ class BackendService {
 
     return jsonDecode(response.body);
   }
+  // --- MFA ---
+
+  /// Envia código MFA por email ou SMS
+  Future<Map<String, dynamic>> sendMfaCode({required String method, String? phone}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final body = <String, dynamic>{'method': method};
+    if (phone != null) body['phone'] = phone;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/mfa/send-code'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(responseBody['error'] ?? 'Erro ao enviar código MFA');
+    }
+    return Map<String, dynamic>.from(responseBody);
+  }
+
+  /// Verifica o código MFA digitado pelo usuário
+  Future<Map<String, dynamic>> verifyMfaCode(String code) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/mfa/verify-code'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'code': code}),
+    );
+
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(responseBody['error'] ?? 'Código inválido');
+    }
+    return Map<String, dynamic>.from(responseBody);
+  }
+
+  /// Verifica o status do MFA do usuário
+  Future<Map<String, dynamic>> checkMfaStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/mfa/status'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(responseBody['error'] ?? 'Erro ao verificar MFA');
+    }
+    return Map<String, dynamic>.from(responseBody);
+  }
+
+  /// Desativa o MFA customizado (email/sms)
+  Future<void> disableMfa() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception("Usuário não logado");
+
+    final token = await user.getIdToken();
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/mfa/disable'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      final errorMap = jsonDecode(response.body);
+      throw Exception(errorMap['error'] ?? "Erro ao desativar MFA");
+    }
+  }
 
 }

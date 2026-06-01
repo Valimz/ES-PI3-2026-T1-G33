@@ -8,7 +8,7 @@ class MfaPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Ativar código de segurança'),
+          title: const Text('Configurar Segurança'),
           centerTitle: true),
       body: const SafeArea(
         child: SingleChildScrollView(

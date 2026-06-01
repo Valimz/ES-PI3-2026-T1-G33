@@ -77,7 +77,7 @@ class _HomePageState extends State<HomePage> {
                 value: 'mfa',
                 child: ListTile(
                   leading: Icon(Icons.shield_outlined),
-                  title: Text('Ativar MFA'),
+                  title: Text('Configurar MFA'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),

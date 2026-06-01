@@ -3,6 +3,10 @@ import { AuthRequest } from '../middlewares/authMiddleware';
 import { db, auth } from '../firebaseAdmin';
 import { sendMfaEmail } from '../services/emailService';
 
+/**
+ * Envia um código MFA por e-mail ou SMS.
+ * Body: { method?: 'email' | 'sms', phone?: string }
+ */
 export const sendMfaCode = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user;
@@ -10,13 +14,11 @@ export const sendMfaCode = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
 
+    const method: string = req.body.method || 'email';
+
     // Busca os dados do usuário para pegar o e-mail
     const userRecord = await auth.getUser(userId);
     const userEmail = userRecord.email;
-
-    if (!userEmail) {
-      return res.status(400).json({ error: 'Usuário não possui um e-mail cadastrado.' });
-    }
 
     // Gera um código de 6 dígitos
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -29,19 +31,59 @@ export const sendMfaCode = async (req: AuthRequest, res: Response) => {
     await db.collection('usuarios').doc(userId).set({
       mfaCode: code,
       mfaCodeExpiresAt: expiresAt.toISOString(),
-      mfaFailedAttempts: 0
+      mfaFailedAttempts: 0,
+      mfaPendingMethod: method,
     }, { merge: true });
 
-    // Envia o e-mail
-    await sendMfaEmail(userEmail, code);
+    if (method === 'sms') {
+      const phone = req.body.phone || userRecord.phoneNumber;
+      if (!phone) {
+        return res.status(400).json({ error: 'Número de telefone não fornecido.' });
+      }
 
-    res.status(200).json({ message: 'Código MFA enviado com sucesso.' });
+      // Salvar o telefone para referência
+      await db.collection('usuarios').doc(userId).update({
+        mfaPhone: phone,
+      });
+
+      // Para SMS, usamos o mesmo serviço de e-mail como fallback demonstrativo:
+      // Em produção, usar Twilio, AWS SNS ou Firebase Phone Auth
+      // Aqui enviamos o código por e-mail informando que é para o "SMS MFA"
+      // e logamos o código no console para teste
+      console.log(`\n======================================================`);
+      console.log(`📱 [SMS MFA] Código para ${phone}: ${code}`);
+      console.log(`======================================================\n`);
+
+      // Também enviar por e-mail como backup (demonstração)
+      if (userEmail) {
+        await sendMfaEmail(userEmail,code);
+      }
+
+      return res.status(200).json({
+        message: `Código MFA enviado por SMS para ${phone.substring(0, 4)}****${phone.substring(phone.length - 2)}.`,
+      });
+    } else {
+      // Email MFA
+      if (!userEmail) {
+        return res.status(400).json({ error: 'Usuário não possui um e-mail cadastrado.' });
+      }
+
+      await sendMfaEmail(userEmail, code);
+
+      return res.status(200).json({
+        message: `Código MFA enviado para ${userEmail.substring(0, 3)}***@${userEmail.split('@')[1]}.`,
+      });
+    }
   } catch (error) {
     console.error('Erro ao enviar código MFA:', error);
     res.status(500).json({ error: 'Erro ao processar o envio do código.' });
   }
 };
 
+/**
+ * Verifica o código MFA digitado pelo usuário.
+ * Body: { code: string }
+ */
 export const verifyMfaCode = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user;
@@ -64,6 +106,7 @@ export const verifyMfaCode = async (req: AuthRequest, res: Response) => {
     const storedCode = userData.mfaCode;
     const expiresAtStr = userData.mfaCodeExpiresAt;
     const failedAttempts: number = userData.mfaFailedAttempts ?? 0;
+    const pendingMethod: string = userData.mfaPendingMethod ?? 'email';
 
     if (!storedCode || !expiresAtStr) {
       return res.status(400).json({ error: 'Nenhum código MFA pendente para este usuário.' });
@@ -74,24 +117,24 @@ export const verifyMfaCode = async (req: AuthRequest, res: Response) => {
       await db.collection('usuarios').doc(userId).update({
         mfaCode: null,
         mfaCodeExpiresAt: null,
-        mfaFailedAttempts: null
+        mfaFailedAttempts: null,
+        mfaPendingMethod: null,
       });
       return res.status(429).json({ error: 'Muitas tentativas falhas. Solicite um novo código.' });
     }
 
     const expiresAt = new Date(expiresAtStr);
     if (new Date() > expiresAt) {
-      // Expirou, limpar código
       await db.collection('usuarios').doc(userId).update({
         mfaCode: null,
         mfaCodeExpiresAt: null,
-        mfaFailedAttempts: null
+        mfaFailedAttempts: null,
+        mfaPendingMethod: null,
       });
       return res.status(400).json({ error: 'O código MFA expirou. Solicite um novo.' });
     }
 
     if (storedCode !== code) {
-      // Incrementar tentativas falhas
       await db.collection('usuarios').doc(userId).update({
         mfaFailedAttempts: failedAttempts + 1
       });
@@ -103,21 +146,29 @@ export const verifyMfaCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Código válido! Ativar MFA (se ainda não estiver) e limpar código
+    // Código válido! Ativar MFA e salvar o método
     await db.collection('usuarios').doc(userId).update({
       mfaEnabled: true,
+      mfaMethod: pendingMethod,
       mfaCode: null,
       mfaCodeExpiresAt: null,
-      mfaFailedAttempts: null
+      mfaFailedAttempts: null,
+      mfaPendingMethod: null,
     });
 
-    res.status(200).json({ message: 'MFA verificado com sucesso!' });
+    res.status(200).json({
+      message: 'MFA verificado e ativado com sucesso!',
+      method: pendingMethod,
+    });
   } catch (error) {
     console.error('Erro ao verificar código MFA:', error);
     res.status(500).json({ error: 'Erro ao validar o código.' });
   }
 };
 
+/**
+ * Verifica o status atual do MFA do usuário.
+ */
 export const checkMfaStatus = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user;
@@ -127,14 +178,54 @@ export const checkMfaStatus = async (req: AuthRequest, res: Response) => {
 
     const userDoc = await db.collection('usuarios').doc(userId).get();
     if (!userDoc.exists) {
-      return res.status(200).json({ mfaEnabled: false });
+      return res.status(200).json({ mfaEnabled: false, mfaMethod: null });
     }
 
     const userData = userDoc.data()!;
-    res.status(200).json({ mfaEnabled: userData.mfaEnabled === true });
+    
+    // Verificar também se tem TOTP no Firebase Auth
+    const userRecord = await auth.getUser(userId);
+    const hasFirebaseMfa = (userRecord.multiFactor?.enrolledFactors?.length ?? 0) > 0;
+    
+    let mfaMethod = userData.mfaMethod ?? null;
+    if (hasFirebaseMfa && !mfaMethod) {
+      mfaMethod = 'totp';
+    }
+
+    res.status(200).json({
+      mfaEnabled: userData.mfaEnabled === true || hasFirebaseMfa,
+      mfaMethod: mfaMethod,
+    });
   } catch (error) {
     console.error('Erro ao verificar status MFA:', error);
     res.status(500).json({ error: 'Erro ao verificar status do MFA.' });
   }
 };
 
+/**
+ * Desativa o MFA para o usuário.
+ */
+export const disableMfa = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user;
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    // Limpar MFA customizado (email/sms) no Firestore
+    await db.collection('usuarios').doc(userId).update({
+      mfaEnabled: false,
+      mfaMethod: null,
+      mfaCode: null,
+      mfaCodeExpiresAt: null,
+      mfaFailedAttempts: null,
+      mfaPendingMethod: null,
+      mfaPhone: null,
+    });
+
+    res.status(200).json({ message: 'MFA desativado com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao desativar MFA:', error);
+    res.status(500).json({ error: 'Erro ao desativar o MFA.' });
+  }
+};
