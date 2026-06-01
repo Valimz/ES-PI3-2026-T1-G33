@@ -16,6 +16,39 @@ class FirestoreService {
         }).toList()).asBroadcastStream();
   }
 
+  // Stream para obter os dados cadastrais do usuário logado (users/{uid}).
+  Stream<Map<String, dynamic>?> getUserProfile() {
+    final user = _auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _db.collection('users').doc(user.uid).snapshots().map((snapshot) {
+      if (snapshot.exists) {
+        return snapshot.data();
+      }
+      return null;
+    }).asBroadcastStream();
+  }
+
+  // Atualiza o telefone do usuário.
+  Future<void> updateUserPhone(String telefone) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _db
+        .collection('users')
+        .doc(user.uid)
+        .set({'telefone': telefone}, SetOptions(merge: true));
+  }
+
+  // Ativa ou desativa o MFA no cadastro do usuário.
+  Future<void> setMfaEnabled(bool enabled) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _db
+        .collection('users')
+        .doc(user.uid)
+        .set({'mfaEnabled': enabled}, SetOptions(merge: true));
+  }
+
   // Stream para obter os dados da carteira do usuário logado
   Stream<Map<String, dynamic>?> getWalletData() {
     final user = _auth.currentUser;

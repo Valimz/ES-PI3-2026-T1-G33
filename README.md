@@ -122,3 +122,58 @@ flutter devices
 # Inicie o app no dispositivo de sua escolha
 flutter run
 ```
+
+## Executando com Firebase Emulator (desenvolvimento local)
+
+Para desenvolver e testar sem depender do Firebase real, o projeto já vem com toda a
+infraestrutura de emulador configurada (`backend/firebase.json` e scripts no
+`backend/package.json`). O app Flutter detecta automaticamente o modo de debug
+(`kDebugMode`) e aponta para os emuladores locais.
+
+**Pré-requisitos**:
+
+- Firebase CLI instalado e autenticado (`npm install -g firebase-tools` e `firebase login`).
+
+**Passo 1 — Compilar as Cloud Functions**
+
+```bash
+cd backend
+npm install            # caso ainda não tenha instalado as dependências
+npm run functions:build
+```
+
+**Passo 2 — Subir os emuladores**
+
+```bash
+# Ainda dentro da pasta backend/
+npm run emulators:start
+```
+
+Isso inicia os emuladores de:
+
+- **Auth** — porta `9099`
+- **Functions** — porta `5001`
+- **Firestore** — porta `8080`
+
+A interface (UI) do Emulator Suite fica disponível em http://localhost:4000.
+
+**Passo 3 — Rodar o app Flutter em modo debug**
+
+```bash
+cd mescla_invest
+flutter run
+```
+
+Em modo debug o app já aponta automaticamente para os emuladores (Android usa
+`10.0.2.2`; web/desktop usam `localhost`).
+
+**Dispositivo Android físico**
+
+Um aparelho físico não enxerga `10.0.2.2` nem `localhost` da máquina host. Passe o IP
+da sua máquina na rede local através da flag `--dart-define`:
+
+```bash
+flutter run --dart-define=EMULATOR_HOST=192.168.0.10
+```
+
+> Substitua `192.168.0.10` pelo IP da máquina que está executando os emuladores.

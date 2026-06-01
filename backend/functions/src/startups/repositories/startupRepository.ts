@@ -33,7 +33,7 @@ const demoStartups: Array<Record<string, any> & {id: string}> = [
     externalMembers: [
       {name: "Mariana Prado", role: "Mentora", organization: "Mescla"},
     ],
-    videoUrl: "https://exemplo.com/demo1",
+    videoUrl: "https://youtu.be/tRBjrs-8IaE",
     demoVideos: ["https://exemplo.com/demo1"],
     status: "ativa",
     faq: [
@@ -75,7 +75,7 @@ const demoStartups: Array<Record<string, any> & {id: string}> = [
     externalMembers: [
       {name: "Ricardo Santos", role: "Mentor", organization: "Mescla"},
     ],
-    videoUrl: "https://exemplo.com/demo2",
+    videoUrl: "https://youtu.be/gpGI1U2J1jY",
     demoVideos: ["https://exemplo.com/demo2"],
     status: "ativa",
     faq: [
@@ -115,7 +115,7 @@ const demoStartups: Array<Record<string, any> & {id: string}> = [
     externalMembers: [
       {name: "Arnaldo Souza", role: "Mentor", organization: "Mescla"},
     ],
-    videoUrl: "https://exemplo.com/demo3",
+    videoUrl: "https://youtu.be/r39Tg-lSpnQ",
     demoVideos: ["https://exemplo.com/demo3"],
     status: "ativa",
     faq: [
@@ -157,7 +157,7 @@ const demoStartups: Array<Record<string, any> & {id: string}> = [
     externalMembers: [
       {name: "Sandra Meireles", role: "Mentora", organization: "Mescla"},
     ],
-    videoUrl: "https://exemplo.com/demo4",
+    videoUrl: "https://youtu.be/HdZZj3HdXUg",
     demoVideos: ["https://exemplo.com/demo4"],
     status: "ativa",
     faq: [
@@ -197,7 +197,7 @@ const demoStartups: Array<Record<string, any> & {id: string}> = [
     externalMembers: [
       {name: "Fernando Silva", role: "Mentor", organization: "Mescla"},
     ],
-    videoUrl: "https://exemplo.com/demo5",
+    videoUrl: "https://youtu.be/crfM-8bViG8",
     demoVideos: ["https://exemplo.com/demo5"],
     status: "ativa",
     faq: [

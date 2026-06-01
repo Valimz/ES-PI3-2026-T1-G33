@@ -66,12 +66,16 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Sair da Conta',
           ),
           const SizedBox(width: 8),
-          const CircleAvatar(
-            backgroundColor: AppColors.accent,
-            radius: 16,
-            child: Icon(Icons.person, size: 20, color: AppColors.primary),
+          IconButton(
+            tooltip: 'Perfil',
+            onPressed: () => Navigator.pushNamed(context, '/perfil'),
+            icon: const CircleAvatar(
+              backgroundColor: AppColors.accent,
+              radius: 16,
+              child: Icon(Icons.person, size: 20, color: AppColors.primary),
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(

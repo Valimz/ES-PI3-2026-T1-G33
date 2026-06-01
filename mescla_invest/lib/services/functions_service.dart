@@ -102,6 +102,11 @@ class FunctionsService {
   }
 
   String _firebaseEmulatorHost() {
+    const override = String.fromEnvironment('EMULATOR_HOST');
+    if (override.isNotEmpty) {
+      return override;
+    }
+
     if (kIsWeb) {
       return 'localhost';
     }
